@@ -4,4 +4,10 @@
 EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
-  m_Scenes: []
+  m_Scenes:
+  - enabled: 1
+    path: Assets/1_Basics/06_ObjectPools/StuffScene1.unity
+    guid: 911fbd6a0d7ade543927346af0f8742c
+  - enabled: 1
+    path: Assets/1_Basics/06_ObjectPools/StuffScene2.unity
+    guid: a31b5dfc7ba67f842b8ab98f79c1869f

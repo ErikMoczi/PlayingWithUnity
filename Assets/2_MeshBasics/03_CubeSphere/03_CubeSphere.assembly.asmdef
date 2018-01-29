@@ -1,0 +1,8 @@
+{
+    "name": "2.03_CubeSphere-CSharp",
+    "references": [
+        "2.02_RoundedCube-CSharp"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": []
+}

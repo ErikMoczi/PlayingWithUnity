@@ -1,5 +1,4 @@
-﻿using System;
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 
 public class HexGrid : MonoBehaviour
@@ -54,14 +53,44 @@ public class HexGrid : MonoBehaviour
 
         var cell = _cells[i] = Instantiate<HexCell>(CellPrefab);
         var cellTransform = cell.transform;
-        cellTransform.SetParent(transform, false);
+        cellTransform.SetParent(_hexMesh.transform, false);
         cellTransform.localPosition = position;
         cell.Coordinates = HexCoordinates.FromOffsetCoordinates(x, z);
         cell.Color = DefaultColor;
 
+        if (x > 0)
+        {
+            cell.SetNeighbor(HexDirection.W, _cells[i - 1]);
+        }
+
+        if (z > 0)
+        {
+            if ((z & 1) == 0)
+            {
+                cell.SetNeighbor(HexDirection.SE, _cells[i - Width]);
+                if (x > 0)
+                {
+                    cell.SetNeighbor(HexDirection.SW, _cells[i - Width - 1]);
+                }
+            }
+            else
+            {
+                cell.SetNeighbor(HexDirection.SW, _cells[i - Width]);
+                if (x < Width - 1)
+                {
+                    cell.SetNeighbor(HexDirection.SE, _cells[i - Width + 1]);
+                }
+            }
+        }
+
+//        CreateCellLabel(position, cell.Coordinates.ToStringOnSeparateLines());
+    }
+
+    private void CreateCellLabel(Vector3 position, string displayText)
+    {
         var label = Instantiate<Text>(CellLabelPrefab);
         label.rectTransform.SetParent(_gridCanvas.transform, false);
         label.rectTransform.anchoredPosition = new Vector2(position.x, position.z);
-        label.text = cell.Coordinates.ToStringOnSeparateLines();
+        label.text = displayText;
     }
 }

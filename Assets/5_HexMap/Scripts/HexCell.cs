@@ -8,6 +8,8 @@ public class HexCell : MonoBehaviour
 
     [SerializeField] private HexCell[] _neighbors;
 
+    private int _elevation;
+    
     public int Elevation
     {
         get { return _elevation; }
@@ -16,15 +18,20 @@ public class HexCell : MonoBehaviour
             _elevation = value;
             var position = transform.localPosition;
             position.y = value * HexMetrics.ElevationStep;
+            position.y += (HexMetrics.SampleNoise(position).y * 2f - 1f) * HexMetrics.ElevationPerturbStrength;
             transform.localPosition = position;
 
             var uiPosition = UIRect.localPosition;
-            uiPosition.z = _elevation * -HexMetrics.ElevationStep;
+            uiPosition.z = -position.y;
             UIRect.localPosition = uiPosition;
         }
     }
-
-    private int _elevation;
+    
+    public Vector3 Position {
+        get {
+            return transform.localPosition;
+        }
+    }
 
     public HexCell GetNeighbor(HexDirection direction)
     {

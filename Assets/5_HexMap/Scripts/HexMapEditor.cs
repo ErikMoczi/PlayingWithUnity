@@ -8,6 +8,9 @@ public class HexMapEditor : MonoBehaviour
 
     private Color _activeColor;
     private int _activeElevation;
+    private bool _applyColor;
+    private bool _applyElevation = true;
+    private int _brushSize;
 
     private void Awake()
     {
@@ -27,12 +30,31 @@ public class HexMapEditor : MonoBehaviour
 
     public void SelectColor(int index)
     {
-        _activeColor = Colors[index];
+        _applyColor = index >= 0;
+        if (_applyColor)
+        {
+            _activeColor = Colors[index];
+        }
     }
 
     public void SetElevation(float elevation)
     {
         _activeElevation = (int) elevation;
+    }
+
+    public void SetApplyElevation(bool toogle)
+    {
+        _applyElevation = toogle;
+    }
+
+    public void SetBrushSize(float size)
+    {
+        _brushSize = (int) size;
+    }
+
+    public void ShowUI(bool visible)
+    {
+        HexGrid.ShowUI(visible);
     }
 
     private void HandleInput()
@@ -41,14 +63,44 @@ public class HexMapEditor : MonoBehaviour
         RaycastHit hit;
         if (Physics.Raycast(inputRay, out hit))
         {
-            EditCell(HexGrid.GetCell(hit.point));
+            EditCells(HexGrid.GetCell(hit.point));
+        }
+    }
+
+    private void EditCells(HexCell center)
+    {
+        var centerX = center.Coordinates.X;
+        var centerZ = center.Coordinates.Z;
+        for (int r = 0, z = centerZ - _brushSize; z <= centerZ; r++, z++)
+        {
+            for (int x = centerX - r; x <= centerX + _brushSize; x++)
+            {
+                EditCell(HexGrid.GetCell(new HexCoordinates(x, z)));
+            }
+        }
+
+        for (int r = 0, z = centerZ + _brushSize; z > centerZ; z--, r++)
+        {
+            for (int x = centerX - _brushSize; x <= centerX + r; x++)
+            {
+                EditCell(HexGrid.GetCell(new HexCoordinates(x, z)));
+            }
         }
     }
 
     private void EditCell(HexCell cell)
     {
-        cell.Color = _activeColor;
-        cell.Elevation = _activeElevation;
-        HexGrid.Refresh();
+        if (cell)
+        {
+            if (_applyColor)
+            {
+                cell.Color = _activeColor;
+            }
+
+            if (_applyElevation)
+            {
+                cell.Elevation = _activeElevation;
+            }
+        }
     }
 }

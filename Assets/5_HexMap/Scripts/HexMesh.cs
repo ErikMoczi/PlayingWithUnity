@@ -5,9 +5,9 @@ using UnityEngine;
 public class HexMesh : MonoBehaviour
 {
     private Mesh _hexMesh;
-    private List<Vector3> _vertices;
-    private List<int> _triangles;
-    private List<Color> _colors;
+    private static readonly List<Vector3> Vertices = new List<Vector3>();
+    private static readonly List<int> Triangles = new List<int>();
+    private static readonly List<Color> Colors = new List<Color>();
     private MeshCollider _meshCollider;
 
     private void Awake()
@@ -15,26 +15,23 @@ public class HexMesh : MonoBehaviour
         GetComponent<MeshFilter>().mesh = _hexMesh = new Mesh();
         _meshCollider = gameObject.AddComponent<MeshCollider>();
         _hexMesh.name = "Hex Mesh";
-        _vertices = new List<Vector3>();
-        _triangles = new List<int>();
-        _colors = new List<Color>();
     }
 
     public void Triangulate(HexCell[] cells)
     {
         _hexMesh.Clear();
-        _vertices.Clear();
-        _triangles.Clear();
-        _colors.Clear();
+        Vertices.Clear();
+        Triangles.Clear();
+        Colors.Clear();
 
         for (int i = 0; i < cells.Length; i++)
         {
             Triangulate(cells[i]);
         }
 
-        _hexMesh.vertices = _vertices.ToArray();
-        _hexMesh.triangles = _triangles.ToArray();
-        _hexMesh.colors = _colors.ToArray();
+        _hexMesh.vertices = Vertices.ToArray();
+        _hexMesh.triangles = Triangles.ToArray();
+        _hexMesh.colors = Colors.ToArray();
         _hexMesh.RecalculateNormals();
         _meshCollider.sharedMesh = _hexMesh;
     }
@@ -309,44 +306,44 @@ public class HexMesh : MonoBehaviour
 
     private void AddTriangle(Vector3 v1, Vector3 v2, Vector3 v3)
     {
-        var vertexIndex = _vertices.Count;
-        _vertices.AddRange(new[] {Perturb(v1), Perturb(v2), Perturb(v3)});
-        _triangles.AddRange(new[] {vertexIndex, vertexIndex + 1, vertexIndex + 2});
+        var vertexIndex = Vertices.Count;
+        Vertices.AddRange(new[] {Perturb(v1), Perturb(v2), Perturb(v3)});
+        Triangles.AddRange(new[] {vertexIndex, vertexIndex + 1, vertexIndex + 2});
     }
 
     private void AddTriangleUnperturbed(Vector3 v1, Vector3 v2, Vector3 v3)
     {
-        var vertexIndex = _vertices.Count;
-        _vertices.AddRange(new[] {v1, v2, v3});
-        _triangles.AddRange(new[] {vertexIndex, vertexIndex + 1, vertexIndex + 2});
+        var vertexIndex = Vertices.Count;
+        Vertices.AddRange(new[] {v1, v2, v3});
+        Triangles.AddRange(new[] {vertexIndex, vertexIndex + 1, vertexIndex + 2});
     }
 
     private void AddTriangleColor(Color color)
     {
-        _colors.AddRange(new[] {color, color, color});
+        Colors.AddRange(new[] {color, color, color});
     }
 
     private void AddTriangleColor(Color c1, Color c2, Color c3)
     {
-        _colors.AddRange(new[] {c1, c2, c3});
+        Colors.AddRange(new[] {c1, c2, c3});
     }
 
     private void AddQuad(Vector3 v1, Vector3 v2, Vector3 v3, Vector3 v4)
     {
-        var vertexIndex = _vertices.Count;
-        _vertices.AddRange(new[] {Perturb(v1), Perturb(v2), Perturb(v3), Perturb(v4)});
-        _triangles.AddRange(new[]
+        var vertexIndex = Vertices.Count;
+        Vertices.AddRange(new[] {Perturb(v1), Perturb(v2), Perturb(v3), Perturb(v4)});
+        Triangles.AddRange(new[]
             {vertexIndex, vertexIndex + 2, vertexIndex + 1, vertexIndex + 1, vertexIndex + 2, vertexIndex + 3});
     }
 
     private void AddQuadColor(Color c1, Color c2, Color c3, Color c4)
     {
-        _colors.AddRange(new[] {c1, c2, c3, c4});
+        Colors.AddRange(new[] {c1, c2, c3, c4});
     }
 
     private void AddQuadColor(Color c1, Color c2)
     {
-        _colors.AddRange(new[] {c1, c1, c2, c2});
+        Colors.AddRange(new[] {c1, c1, c2, c2});
     }
 
     private Vector3 Perturb(Vector3 position)

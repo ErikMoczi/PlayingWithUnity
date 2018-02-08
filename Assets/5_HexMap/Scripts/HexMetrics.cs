@@ -2,6 +2,8 @@
 
 public static class HexMetrics
 {
+    #region Consts
+
     public const float OuterToInner = 0.866025404f;
     public const float InnerToOuter = 1f / OuterToInner;
 
@@ -18,7 +20,7 @@ public static class HexMetrics
     public const float HorizontalTerraceStepSize = 1f / TerraceSteps;
     public const float VerticalTerraceStepSize = 1f / (TerracesPerSlope + 1);
 
-    public const float CellPerturbStrength = 4f;
+    public const float CellPerturbStrength = 0f;
     public const float NoiseScale = 0.003f;
     public const float ElevationPerturbStrength = 1.5f;
 
@@ -28,7 +30,11 @@ public static class HexMetrics
 
     public const float RiverSurfaceElevationOffset = -0.5f;
 
+    #endregion
+
     public static Texture2D NoiseSource;
+
+    #region Corner
 
     private static readonly Vector3[] Corners =
     {
@@ -60,6 +66,8 @@ public static class HexMetrics
     {
         return Corners[(int) direction + 1] * SolidFactor;
     }
+
+    #endregion
 
     public static Vector3 GetBridge(HexDirection direction)
     {

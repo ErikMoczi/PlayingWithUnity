@@ -22,7 +22,9 @@ public class HexMapEditor : MonoBehaviour
         No
     }
 
-    private OptionalToggle _riverMode;
+    private OptionalToggle _riverMode, _roadMode;
+
+    #region Unity
 
     private void Awake()
     {
@@ -40,6 +42,10 @@ public class HexMapEditor : MonoBehaviour
             _previousCell = null;
         }
     }
+
+    #endregion
+
+    #region UIActions
 
     public void SelectColor(int index)
     {
@@ -74,6 +80,13 @@ public class HexMapEditor : MonoBehaviour
     {
         _riverMode = (OptionalToggle) mode;
     }
+
+    public void SetRoadMode(int mode)
+    {
+        _roadMode = (OptionalToggle) mode;
+    }
+
+    #endregion
 
     private void HandleInput()
     {
@@ -140,12 +153,26 @@ public class HexMapEditor : MonoBehaviour
             {
                 cell.RemoveRiver();
             }
-            else if (_isDrag && _riverMode == OptionalToggle.Yes)
+
+            if (_roadMode == OptionalToggle.No)
+            {
+                cell.RemoveRoads();
+            }
+
+            if (_isDrag)
             {
                 var otherCell = cell.GetNeighbor(_dragDirection.Opposite());
                 if (otherCell)
                 {
-                    otherCell.SetOutgoingRiver(_dragDirection);
+                    if (_riverMode == OptionalToggle.Yes)
+                    {
+                        otherCell.SetOutgoingRiver(_dragDirection);
+                    }
+
+                    if (_roadMode == OptionalToggle.Yes)
+                    {
+                        otherCell.AddRoad(_dragDirection);
+                    }
                 }
             }
         }

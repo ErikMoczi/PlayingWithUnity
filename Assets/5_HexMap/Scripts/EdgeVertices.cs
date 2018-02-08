@@ -4,6 +4,8 @@ public struct EdgeVertices
 {
     public Vector3 V1, V2, V3, V4, V5;
 
+    #region Constructor
+
     public EdgeVertices(Vector3 corner1, Vector3 corner2)
     {
         V1 = corner1;
@@ -21,6 +23,8 @@ public struct EdgeVertices
         V4 = Vector3.Lerp(corner1, corner2, 1f - outerStep);
         V5 = corner2;
     }
+
+    #endregion
 
     public static EdgeVertices TerraceLerp(EdgeVertices a, EdgeVertices b, int step)
     {

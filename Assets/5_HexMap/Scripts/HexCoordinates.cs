@@ -6,6 +6,8 @@ public struct HexCoordinates
 {
     [SerializeField] private int _x, _z;
 
+    #region Properties
+
     public int X
     {
         get { return _x; }
@@ -23,23 +25,15 @@ public struct HexCoordinates
 
     public HexCoordinates(int x, int z)
     {
-        this._x = x;
-        this._z = z;
+        _x = x;
+        _z = z;
     }
+
+    #endregion
 
     public static HexCoordinates FromOffsetCoordinates(int x, int z)
     {
         return new HexCoordinates(x - z / 2, z);
-    }
-
-    public override string ToString()
-    {
-        return "(" + X.ToString() + ", " + Y.ToString() + ", " + Z.ToString() + ")";
-    }
-
-    public string ToStringOnSeparateLines()
-    {
-        return X.ToString() + Environment.NewLine + Y.ToString() + Environment.NewLine + Z.ToString();
     }
 
     public static HexCoordinates FromPosition(Vector3 position)
@@ -73,4 +67,18 @@ public struct HexCoordinates
 
         return new HexCoordinates(iX, iZ);
     }
+
+    #region ToString
+
+    public override string ToString()
+    {
+        return "(" + X.ToString() + ", " + Y.ToString() + ", " + Z.ToString() + ")";
+    }
+
+    public string ToStringOnSeparateLines()
+    {
+        return X.ToString() + Environment.NewLine + Y.ToString() + Environment.NewLine + Z.ToString();
+    }
+
+    #endregion
 }

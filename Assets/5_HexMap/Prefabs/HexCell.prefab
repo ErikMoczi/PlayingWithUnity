@@ -54,7 +54,8 @@ MonoBehaviour:
   Coordinates:
     _x: 0
     _z: 0
-  Color: {r: 1, g: 1, b: 1, a: 1}
+  UIRect: {fileID: 0}
+  Chunk: {fileID: 0}
   _neighbors:
   - {fileID: 0}
   - {fileID: 0}
@@ -62,3 +63,4 @@ MonoBehaviour:
   - {fileID: 0}
   - {fileID: 0}
   - {fileID: 0}
+  _roads: 000000000000

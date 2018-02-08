@@ -14,6 +14,8 @@ public class HexMesh : MonoBehaviour
     [NonSerialized] private List<Vector2> UVs;
     private MeshCollider _meshCollider;
 
+    #region Unity
+
     private void Awake()
     {
         GetComponent<MeshFilter>().mesh = _hexMesh = new Mesh();
@@ -24,6 +26,8 @@ public class HexMesh : MonoBehaviour
 
         _hexMesh.name = "Hex Mesh";
     }
+
+    #endregion
 
     public void Clear()
     {
@@ -66,6 +70,10 @@ public class HexMesh : MonoBehaviour
         }
     }
 
+    #region MeshConstruct
+
+    #region Triangle
+
     public void AddTriangle(Vector3 v1, Vector3 v2, Vector3 v3)
     {
         var vertexIndex = Vertices.Count;
@@ -89,11 +97,15 @@ public class HexMesh : MonoBehaviour
     {
         Colors.AddRange(new[] {c1, c2, c3});
     }
-    
+
     public void AddTriangleUV(Vector2 uv1, Vector2 uv2, Vector2 uv3)
     {
         UVs.AddRange(new[] {uv1, uv2, uv3});
     }
+
+    #endregion
+
+    #region Quad
 
     public void AddQuad(Vector3 v1, Vector3 v2, Vector3 v3, Vector3 v4)
     {
@@ -134,4 +146,8 @@ public class HexMesh : MonoBehaviour
             new Vector2(uMax, vMax)
         });
     }
+
+    #endregion
+
+    #endregion
 }

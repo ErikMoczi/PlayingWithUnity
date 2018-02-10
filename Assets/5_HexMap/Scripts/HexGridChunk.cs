@@ -3,7 +3,7 @@ using UnityEngine.UI;
 
 public class HexGridChunk : MonoBehaviour
 {
-    public HexMesh Terrain, Rivers, Roads;
+    public HexMesh Terrain, Rivers, Roads, Water, WaterShore, Estuaries;
 
     private HexCell[] _cells;
     private Canvas _gridCanvas;
@@ -54,6 +54,9 @@ public class HexGridChunk : MonoBehaviour
         Terrain.Clear();
         Rivers.Clear();
         Roads.Clear();
+        Water.Clear();
+        WaterShore.Clear();
+        Estuaries.Clear();
         for (int i = 0; i < _cells.Length; i++)
         {
             Triangulate(_cells[i]);
@@ -62,6 +65,9 @@ public class HexGridChunk : MonoBehaviour
         Terrain.Apply();
         Rivers.Apply();
         Roads.Apply();
+        Water.Apply();
+        WaterShore.Apply();
+        Estuaries.Apply();
     }
 
     private void Triangulate(HexCell cell)
@@ -102,12 +108,16 @@ public class HexGridChunk : MonoBehaviour
         else
         {
             TriangulateWithoutRiver(direction, cell, center, e);
-            TriangulateEdgeFan(center, e, cell.Color);
         }
 
         if (direction <= HexDirection.SE)
         {
             TriangulateConnection(direction, cell, e);
+        }
+
+        if (cell.IsUnderwater)
+        {
+            TriangulateWater(direction, cell, center);
         }
     }
 
@@ -129,8 +139,24 @@ public class HexGridChunk : MonoBehaviour
         if (cell.HasRiverThroughEdge(direction))
         {
             e2.V3.y = neighbor.StreamBedY;
-            TriangulateRiverQuad(e1.V2, e1.V4, e2.V2, e2.V4, cell.RiverSurfaceY, neighbor.RiverSurfaceY, 0.8f,
-                cell.HasIncomingRiver && cell.IncomingRiver == direction);
+            if (!cell.IsUnderwater)
+            {
+                if (!neighbor.IsUnderwater)
+                {
+                    TriangulateRiverQuad(e1.V2, e1.V4, e2.V2, e2.V4, cell.RiverSurfaceY, neighbor.RiverSurfaceY, 0.8f,
+                        cell.HasIncomingRiver && cell.IncomingRiver == direction);
+                }
+                else if (cell.Elevation > neighbor.WaterLevel)
+                {
+                    TriangulateWaterfallInWater(e1.V2, e1.V4, e2.V2, e2.V4, cell.RiverSurfaceY, neighbor.RiverSurfaceY,
+                        neighbor.WaterSurfaceY);
+                }
+            }
+            else if (!neighbor.IsUnderwater && neighbor.Elevation > cell.WaterLevel)
+            {
+                TriangulateWaterfallInWater(e2.V4, e2.V2, e1.V4, e1.V2, neighbor.RiverSurfaceY, cell.RiverSurfaceY,
+                    cell.WaterSurfaceY);
+            }
         }
 
         if (cell.GetEdgeType(direction) == HexEdgeType.Slope)
@@ -439,9 +465,12 @@ public class HexGridChunk : MonoBehaviour
         Terrain.AddTriangle(centerR, m.V4, m.V5);
         Terrain.AddTriangleColor(cell.Color);
 
-        var reversed = cell.IncomingRiver == direction;
-        TriangulateRiverQuad(centerL, centerR, m.V2, m.V4, cell.RiverSurfaceY, 0.4f, reversed);
-        TriangulateRiverQuad(m.V2, m.V4, e.V2, e.V4, cell.RiverSurfaceY, 0.6f, reversed);
+        if (!cell.IsUnderwater)
+        {
+            var reversed = cell.IncomingRiver == direction;
+            TriangulateRiverQuad(centerL, centerR, m.V2, m.V4, cell.RiverSurfaceY, 0.4f, reversed);
+            TriangulateRiverQuad(m.V2, m.V4, e.V2, e.V4, cell.RiverSurfaceY, 0.6f, reversed);
+        }
     }
 
     private void TriangulateWithRiverBeginOrEnd(HexDirection direction, HexCell cell, Vector3 center, EdgeVertices e)
@@ -454,17 +483,20 @@ public class HexGridChunk : MonoBehaviour
         TriangulateEdgeStrip(m, cell.Color, e, cell.Color);
         TriangulateEdgeFan(center, m, cell.Color);
 
-        var reversed = cell.HasIncomingRiver;
-        TriangulateRiverQuad(m.V2, m.V4, e.V2, e.V4, cell.RiverSurfaceY, 0.6f, reversed);
-        center.y = m.V2.y = m.V4.y = cell.RiverSurfaceY;
-        Rivers.AddTriangle(center, m.V2, m.V4);
-        if (reversed)
+        if (!cell.IsUnderwater)
         {
-            Rivers.AddTriangleUV(new Vector2(0.5f, 0.4f), new Vector2(1f, 0.2f), new Vector2(0f, 0.2f));
-        }
-        else
-        {
-            Rivers.AddTriangleUV(new Vector2(0.5f, 0.4f), new Vector2(0f, 0.6f), new Vector2(1f, 0.6f));
+            var reversed = cell.HasIncomingRiver;
+            TriangulateRiverQuad(m.V2, m.V4, e.V2, e.V4, cell.RiverSurfaceY, 0.6f, reversed);
+            center.y = m.V2.y = m.V4.y = cell.RiverSurfaceY;
+            Rivers.AddTriangle(center, m.V2, m.V4);
+            if (reversed)
+            {
+                Rivers.AddTriangleUV(new Vector2(0.5f, 0.4f), new Vector2(1f, 0.2f), new Vector2(0f, 0.2f));
+            }
+            else
+            {
+                Rivers.AddTriangleUV(new Vector2(0.5f, 0.4f), new Vector2(0f, 0.6f), new Vector2(1f, 0.6f));
+            }
         }
     }
 
@@ -669,6 +701,181 @@ public class HexGridChunk : MonoBehaviour
         if (nextHasRiver)
         {
             TriangulateRoadEdge(roadCenter, mR, center);
+        }
+    }
+
+    #endregion
+
+    #region Water
+
+    private void TriangulateWater(HexDirection direction, HexCell cell, Vector3 center)
+    {
+        center.y = cell.WaterSurfaceY;
+
+        var neighbor = cell.GetNeighbor(direction);
+        if (neighbor != null && !neighbor.IsUnderwater)
+        {
+            TriangulateWaterShore(direction, cell, neighbor, center);
+        }
+        else
+        {
+            TriangulateOpenWater(direction, cell, neighbor, center);
+        }
+    }
+
+    private void TriangulateOpenWater(HexDirection direction, HexCell cell, HexCell neighbor, Vector3 center)
+    {
+        var c1 = center + HexMetrics.GetFirstWaterCorner(direction);
+        var c2 = center + HexMetrics.GetSecondWaterCorner(direction);
+
+        Water.AddTriangle(center, c1, c2);
+
+        if (direction <= HexDirection.SE && neighbor != null)
+        {
+            var bridge = HexMetrics.GetWaterBridge(direction);
+            var e1 = c1 + bridge;
+            var e2 = c2 + bridge;
+
+            Water.AddQuad(c1, c2, e1, e2);
+
+            if (direction <= HexDirection.E)
+            {
+                var nextNeighbor = cell.GetNeighbor(direction.Next());
+                if (nextNeighbor == null || !nextNeighbor.IsUnderwater)
+                {
+                    return;
+                }
+
+                Water.AddTriangle(c2, e2, c2 + HexMetrics.GetWaterBridge(direction.Next()));
+            }
+        }
+    }
+
+    private void TriangulateWaterShore(HexDirection direction, HexCell cell, HexCell neighbor, Vector3 center)
+    {
+        var e1 = new EdgeVertices(
+            center + HexMetrics.GetFirstWaterCorner(direction),
+            center + HexMetrics.GetSecondWaterCorner(direction)
+        );
+        Water.AddTriangle(center, e1.V1, e1.V2);
+        Water.AddTriangle(center, e1.V2, e1.V3);
+        Water.AddTriangle(center, e1.V3, e1.V4);
+        Water.AddTriangle(center, e1.V4, e1.V5);
+
+        var center2 = neighbor.Position;
+        center2.y = center.y;
+        var e2 = new EdgeVertices(
+            center2 + HexMetrics.GetSecondSolidCorner(direction.Opposite()),
+            center2 + HexMetrics.GetFirstSolidCorner(direction.Opposite())
+        );
+        if (cell.HasRiverThroughEdge(direction))
+        {
+            TriangulateEstuary(e1, e2, cell.IncomingRiver == direction);
+        }
+        else
+        {
+            WaterShore.AddQuad(e1.V1, e1.V2, e2.V1, e2.V2);
+            WaterShore.AddQuad(e1.V2, e1.V3, e2.V2, e2.V3);
+            WaterShore.AddQuad(e1.V3, e1.V4, e2.V3, e2.V4);
+            WaterShore.AddQuad(e1.V4, e1.V5, e2.V4, e2.V5);
+            WaterShore.AddQuadUV(0f, 0f, 0f, 1f);
+            WaterShore.AddQuadUV(0f, 0f, 0f, 1f);
+            WaterShore.AddQuadUV(0f, 0f, 0f, 1f);
+            WaterShore.AddQuadUV(0f, 0f, 0f, 1f);
+        }
+
+        var nextNeighbor = cell.GetNeighbor(direction.Next());
+        if (nextNeighbor != null)
+        {
+            var v3 = nextNeighbor.Position + (
+                         nextNeighbor.IsUnderwater
+                             ? HexMetrics.GetFirstWaterCorner(direction.Previous())
+                             : HexMetrics.GetFirstSolidCorner(direction.Previous())
+                     );
+            v3.y = center.y;
+            WaterShore.AddTriangle(e1.V5, e2.V5, v3);
+            WaterShore.AddTriangleUV(
+                new Vector2(0f, 0f),
+                new Vector2(0f, 1f),
+                new Vector2(0f, nextNeighbor.IsUnderwater ? 0f : 1f)
+            );
+        }
+    }
+
+    private void TriangulateWaterfallInWater(Vector3 v1, Vector3 v2, Vector3 v3, Vector3 v4, float y1, float y2,
+        float waterY)
+    {
+        v1.y = v2.y = y1;
+        v3.y = v4.y = y2;
+        v1 = HexMetrics.Perturb(v1);
+        v2 = HexMetrics.Perturb(v2);
+        v3 = HexMetrics.Perturb(v3);
+        v4 = HexMetrics.Perturb(v4);
+        var t = (waterY - y2) / (y1 - y2);
+        v3 = Vector3.Lerp(v3, v1, t);
+        v4 = Vector3.Lerp(v4, v2, t);
+        Rivers.AddQuadUnperturbed(v1, v2, v3, v4);
+        Rivers.AddQuadUV(0f, 1f, 0.8f, 1f);
+    }
+
+    private void TriangulateEstuary(EdgeVertices e1, EdgeVertices e2, bool incomingRiver)
+    {
+        WaterShore.AddTriangle(e2.V1, e1.V2, e1.V1);
+        WaterShore.AddTriangle(e2.V5, e1.V5, e1.V4);
+        WaterShore.AddTriangleUV(
+            new Vector2(0f, 1f), new Vector2(0f, 0f), new Vector2(0f, 0f)
+        );
+        WaterShore.AddTriangleUV(
+            new Vector2(0f, 1f), new Vector2(0f, 0f), new Vector2(0f, 0f)
+        );
+
+        Estuaries.AddQuad(e2.V1, e1.V2, e2.V2, e1.V3);
+        Estuaries.AddTriangle(e1.V3, e2.V2, e2.V4);
+        Estuaries.AddQuad(e1.V3, e1.V4, e2.V4, e2.V5);
+
+        Estuaries.AddQuadUV(
+            new Vector2(0f, 1f), new Vector2(0f, 0f),
+            new Vector2(1f, 1f), new Vector2(0f, 0f)
+        );
+        Estuaries.AddTriangleUV(
+            new Vector2(0f, 0f), new Vector2(1f, 1f), new Vector2(1f, 1f)
+        );
+        Estuaries.AddQuadUV(
+            new Vector2(0f, 0f), new Vector2(0f, 0f),
+            new Vector2(1f, 1f), new Vector2(0f, 1f)
+        );
+
+        if (incomingRiver)
+        {
+            Estuaries.AddQuadUV2(
+                new Vector2(1.5f, 1f), new Vector2(0.7f, 1.15f),
+                new Vector2(1f, 0.8f), new Vector2(0.5f, 1.1f)
+            );
+            Estuaries.AddTriangleUV2(
+                new Vector2(0.5f, 1.1f),
+                new Vector2(1f, 0.8f),
+                new Vector2(0f, 0.8f)
+            );
+            Estuaries.AddQuadUV2(
+                new Vector2(0.5f, 1.1f), new Vector2(0.3f, 1.15f),
+                new Vector2(0f, 0.8f), new Vector2(-0.5f, 1f)
+            );
+        }
+        else
+        {
+            Estuaries.AddQuadUV2(
+                new Vector2(-0.5f, -0.2f), new Vector2(0.3f, -0.35f),
+                new Vector2(0f, 0f), new Vector2(0.5f, -0.3f)
+            );
+            Estuaries.AddTriangleUV2(
+                new Vector2(0.5f, -0.3f),
+                new Vector2(0f, 0f),
+                new Vector2(1f, 0f)
+            );
+            Estuaries.AddQuadUV2(
+                new Vector2(0.5f, -0.3f), new Vector2(0.7f, -0.35f),
+                new Vector2(1f, 0f), new Vector2(1.5f, -0.2f)
+            );
         }
     }
 

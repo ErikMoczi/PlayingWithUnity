@@ -20,7 +20,7 @@ public static class HexMetrics
     public const float HorizontalTerraceStepSize = 1f / TerraceSteps;
     public const float VerticalTerraceStepSize = 1f / (TerracesPerSlope + 1);
 
-    public const float CellPerturbStrength = 0f;
+    public const float CellPerturbStrength = 4f;
     public const float NoiseScale = 0.003f;
     public const float ElevationPerturbStrength = 1.5f;
 
@@ -28,7 +28,9 @@ public static class HexMetrics
 
     public const float StreamBedElevationOffset = -1.75f;
 
-    public const float RiverSurfaceElevationOffset = -0.5f;
+    public const float WaterElevationOffset = -0.5f;
+    public const float WaterFactor = 0.6f;
+    public const float WaterBlendFactor = 1f - WaterFactor;
 
     #endregion
 
@@ -124,5 +126,20 @@ public static class HexMetrics
         position.x += (sample.x * 2f - 1f) * CellPerturbStrength;
         position.z += (sample.z * 2f - 1f) * CellPerturbStrength;
         return position;
+    }
+
+    public static Vector3 GetFirstWaterCorner(HexDirection direction)
+    {
+        return Corners[(int) direction] * WaterFactor;
+    }
+
+    public static Vector3 GetSecondWaterCorner(HexDirection direction)
+    {
+        return Corners[(int) direction + 1] * WaterFactor;
+    }
+
+    public static Vector3 GetWaterBridge(HexDirection direction)
+    {
+        return (Corners[(int) direction] + Corners[(int) direction + 1]) * WaterBlendFactor;
     }
 }

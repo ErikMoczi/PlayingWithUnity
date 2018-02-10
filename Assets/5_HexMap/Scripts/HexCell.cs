@@ -30,15 +30,7 @@ public class HexCell : MonoBehaviour
             uiPosition.z = -position.y;
             UIRect.localPosition = uiPosition;
 
-            if (_hasOutgoingRiver && _elevation < GetNeighbor(_outgoingRiver)._elevation)
-            {
-                RemoveOutgoingRiver();
-            }
-
-            if (_hasIncomingRiver && _elevation > GetNeighbor(_incomingRiver)._elevation)
-            {
-                RemoveIncomingRiver();
-            }
+            ValidateRivers();
 
             for (var i = 0; i < _roads.Length; i++)
             {
@@ -203,7 +195,7 @@ public class HexCell : MonoBehaviour
         }
 
         var neighbor = GetNeighbor(direction);
-        if (!neighbor || _elevation < neighbor._elevation)
+        if (!IsValidRiverDestination(neighbor))
         {
             return;
         }
@@ -226,7 +218,25 @@ public class HexCell : MonoBehaviour
 
     public float RiverSurfaceY
     {
-        get { return (_elevation + HexMetrics.RiverSurfaceElevationOffset) * HexMetrics.ElevationStep; }
+        get { return (_elevation + HexMetrics.WaterElevationOffset) * HexMetrics.ElevationStep; }
+    }
+
+    private bool IsValidRiverDestination(HexCell neighbor)
+    {
+        return neighbor && (_elevation >= neighbor._elevation || _waterLevel == neighbor._elevation);
+    }
+
+    private void ValidateRivers()
+    {
+        if (HasOutgoingRiver && !IsValidRiverDestination(GetNeighbor(OutgoingRiver)))
+        {
+            RemoveOutgoingRiver();
+        }
+
+        if (HasIncomingRiver && !GetNeighbor(IncomingRiver).IsValidRiverDestination(this))
+        {
+            RemoveIncomingRiver();
+        }
     }
 
     #endregion
@@ -294,6 +304,46 @@ public class HexCell : MonoBehaviour
         _neighbors[index].RefreshSelfOnly();
         RefreshSelfOnly();
     }
+
+    #endregion
+
+    #region Water
+
+    #region Attributes
+
+    private int _waterLevel;
+
+    #endregion
+
+    #region Properties
+
+    public int WaterLevel
+    {
+        get { return _waterLevel; }
+        set
+        {
+            if (_waterLevel == value)
+            {
+                return;
+            }
+
+            _waterLevel = value;
+            ValidateRivers();
+            Refresh();
+        }
+    }
+
+    public bool IsUnderwater
+    {
+        get { return _waterLevel > _elevation; }
+    }
+
+    public float WaterSurfaceY
+    {
+        get { return (_waterLevel + HexMetrics.WaterElevationOffset) * HexMetrics.ElevationStep; }
+    }
+
+    #endregion
 
     #endregion
 

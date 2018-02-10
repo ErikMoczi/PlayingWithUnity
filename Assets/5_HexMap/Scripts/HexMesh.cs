@@ -5,13 +5,13 @@ using UnityEngine;
 [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
 public class HexMesh : MonoBehaviour
 {
-    public bool UseCollider, UseColors, UseUVCoordinates;
+    public bool UseCollider, UseColors, UseUVCoordinates, UseUV2Coordinates;
 
     private Mesh _hexMesh;
     [NonSerialized] private List<Vector3> Vertices;
     [NonSerialized] private List<int> Triangles;
     [NonSerialized] private List<Color> Colors;
-    [NonSerialized] private List<Vector2> UVs;
+    [NonSerialized] private List<Vector2> UVs, UV2s;
     private MeshCollider _meshCollider;
 
     #region Unity
@@ -43,14 +43,17 @@ public class HexMesh : MonoBehaviour
         {
             UVs = ListPool<Vector2>.Get();
         }
+
+        if (UseUV2Coordinates)
+        {
+            UV2s = ListPool<Vector2>.Get();
+        }
     }
 
     public void Apply()
     {
         _hexMesh.SetVertices(Vertices);
         ListPool<Vector3>.Add(Vertices);
-        _hexMesh.SetTriangles(Triangles, 0);
-        ListPool<int>.Add(Triangles);
         if (UseColors)
         {
             _hexMesh.SetColors(Colors);
@@ -63,6 +66,14 @@ public class HexMesh : MonoBehaviour
             ListPool<Vector2>.Add(UVs);
         }
 
+        if (UseUV2Coordinates)
+        {
+            _hexMesh.SetUVs(1, UV2s);
+            ListPool<Vector2>.Add(UV2s);
+        }
+
+        _hexMesh.SetTriangles(Triangles, 0);
+        ListPool<int>.Add(Triangles);
         _hexMesh.RecalculateNormals();
         if (UseCollider)
         {
@@ -103,6 +114,11 @@ public class HexMesh : MonoBehaviour
         UVs.AddRange(new[] {uv1, uv2, uv3});
     }
 
+    public void AddTriangleUV2(Vector2 uv1, Vector2 uv2, Vector2 uv3)
+    {
+        UV2s.AddRange(new[] {uv1, uv2, uv3});
+    }
+
     #endregion
 
     #region Quad
@@ -112,6 +128,14 @@ public class HexMesh : MonoBehaviour
         var vertexIndex = Vertices.Count;
         Vertices.AddRange(new[]
             {HexMetrics.Perturb(v1), HexMetrics.Perturb(v2), HexMetrics.Perturb(v3), HexMetrics.Perturb(v4)});
+        Triangles.AddRange(new[]
+            {vertexIndex, vertexIndex + 2, vertexIndex + 1, vertexIndex + 1, vertexIndex + 2, vertexIndex + 3});
+    }
+
+    public void AddQuadUnperturbed(Vector3 v1, Vector3 v2, Vector3 v3, Vector3 v4)
+    {
+        var vertexIndex = Vertices.Count;
+        Vertices.AddRange(new[] {v1, v2, v3, v4});
         Triangles.AddRange(new[]
             {vertexIndex, vertexIndex + 2, vertexIndex + 1, vertexIndex + 1, vertexIndex + 2, vertexIndex + 3});
     }
@@ -136,9 +160,25 @@ public class HexMesh : MonoBehaviour
         UVs.AddRange(new[] {uv1, uv2, uv3, uv4});
     }
 
+    public void AddQuadUV2(Vector2 uv1, Vector2 uv2, Vector2 uv3, Vector2 uv4)
+    {
+        UV2s.AddRange(new[] {uv1, uv2, uv3, uv4});
+    }
+
     public void AddQuadUV(float uMin, float uMax, float vMin, float vMax)
     {
         UVs.AddRange(new[]
+        {
+            new Vector2(uMin, vMin),
+            new Vector2(uMax, vMin),
+            new Vector2(uMin, vMax),
+            new Vector2(uMax, vMax)
+        });
+    }
+
+    public void AddQuadUV2(float uMin, float uMax, float vMin, float vMax)
+    {
+        UV2s.AddRange(new[]
         {
             new Vector2(uMin, vMin),
             new Vector2(uMax, vMin),

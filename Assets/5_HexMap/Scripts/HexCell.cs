@@ -371,4 +371,57 @@ public class HexCell : MonoBehaviour
     }
 
     #endregion
+
+    #region Features
+
+    #region Attributes
+
+    private int _urbanLevel, _farmLevel, _plantLevel;
+
+    #endregion
+
+    #region Properties
+
+    public int UrbanLevel
+    {
+        get { return _urbanLevel; }
+        set
+        {
+            if (_urbanLevel != value)
+            {
+                _urbanLevel = value;
+                RefreshSelfOnly();
+            }
+        }
+    }
+
+    public int FarmLevel
+    {
+        get { return _farmLevel; }
+        set
+        {
+            if (_farmLevel != value)
+            {
+                _farmLevel = value;
+                RefreshSelfOnly();
+            }
+        }
+    }
+
+    public int PlantLevel
+    {
+        get { return _plantLevel; }
+        set
+        {
+            if (_plantLevel != value)
+            {
+                _plantLevel = value;
+                RefreshSelfOnly();
+            }
+        }
+    }
+
+    #endregion
+
+    #endregion
 }

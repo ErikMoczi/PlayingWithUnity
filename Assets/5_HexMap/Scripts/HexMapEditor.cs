@@ -31,7 +31,7 @@ public class HexMapEditor : MonoBehaviour
         No
     }
 
-    private OptionalToggle _riverMode, _roadMode;
+    private OptionalToggle _riverMode, _roadMode, _walledMode;
 
     #region Unity
 
@@ -135,6 +135,11 @@ public class HexMapEditor : MonoBehaviour
         _activePlantLevel = (int) level;
     }
 
+    public void SetWalledMode(int mode)
+    {
+        _walledMode = (OptionalToggle) mode;
+    }
+
     #endregion
 
     private void HandleInput()
@@ -226,6 +231,11 @@ public class HexMapEditor : MonoBehaviour
             if (_roadMode == OptionalToggle.No)
             {
                 cell.RemoveRoads();
+            }
+
+            if (_walledMode != OptionalToggle.Ignore)
+            {
+                cell.Walled = _walledMode == OptionalToggle.Yes;
             }
 
             if (_isDrag)

@@ -377,6 +377,7 @@ public class HexCell : MonoBehaviour
     #region Attributes
 
     private int _urbanLevel, _farmLevel, _plantLevel;
+    private bool _walled;
 
     #endregion
 
@@ -417,6 +418,19 @@ public class HexCell : MonoBehaviour
             {
                 _plantLevel = value;
                 RefreshSelfOnly();
+            }
+        }
+    }
+
+    public bool Walled
+    {
+        get { return _walled; }
+        set
+        {
+            if (_walled != value)
+            {
+                _walled = value;
+                Refresh();
             }
         }
     }

@@ -21,8 +21,8 @@ public class HexMapEditor : MonoBehaviour
     private int _activeWaterLevel;
     private bool _applyWaterLevel;
 
-    private int _activeUrbanLevel, _activeFarmLevel, _activePlantLevel;
-    private bool _applyUrbanLevel, _applyFarmLevel, _applyPlantLevel;
+    private int _activeUrbanLevel, _activeFarmLevel, _activePlantLevel, _activeSpecialIndex;
+    private bool _applyUrbanLevel, _applyFarmLevel, _applyPlantLevel, _applySpecialIndex;
 
     private enum OptionalToggle
     {
@@ -140,6 +140,16 @@ public class HexMapEditor : MonoBehaviour
         _walledMode = (OptionalToggle) mode;
     }
 
+    public void SetApplySpecialIndex(bool toggle)
+    {
+        _applySpecialIndex = toggle;
+    }
+
+    public void SetSpecialIndex(float index)
+    {
+        _activeSpecialIndex = (int) index;
+    }
+
     #endregion
 
     private void HandleInput()
@@ -206,6 +216,11 @@ public class HexMapEditor : MonoBehaviour
             if (_applyWaterLevel)
             {
                 cell.WaterLevel = _activeWaterLevel;
+            }
+
+            if (_applySpecialIndex)
+            {
+                cell.SpecialIndex = _activeSpecialIndex;
             }
 
             if (_applyUrbanLevel)

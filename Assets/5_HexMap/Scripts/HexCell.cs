@@ -208,10 +208,12 @@ public class HexCell : MonoBehaviour
 
         _hasOutgoingRiver = true;
         _outgoingRiver = direction;
+        SpecialIndex = 0;
 
         neighbor.RemoveIncomingRiver();
         neighbor._hasIncomingRiver = true;
         neighbor._incomingRiver = direction.Opposite();
+        neighbor.SpecialIndex = 0;
 
         SetRoad((int) direction, false);
     }
@@ -291,7 +293,8 @@ public class HexCell : MonoBehaviour
 
     public void AddRoad(HexDirection direction)
     {
-        if (!_roads[(int) direction] && !HasRiverThroughEdge(direction) && GetElevationDifference(direction) <= 1)
+        if (!_roads[(int) direction] && !HasRiverThroughEdge(direction) && !IsSpecial &&
+            !GetNeighbor(direction).IsSpecial && GetElevationDifference(direction) <= 1)
         {
             SetRoad((int) direction, true);
         }
@@ -378,6 +381,7 @@ public class HexCell : MonoBehaviour
 
     private int _urbanLevel, _farmLevel, _plantLevel;
     private bool _walled;
+    private int _specialIndex;
 
     #endregion
 
@@ -433,6 +437,25 @@ public class HexCell : MonoBehaviour
                 Refresh();
             }
         }
+    }
+
+    public int SpecialIndex
+    {
+        get { return _specialIndex; }
+        set
+        {
+            if (_specialIndex != value && !HasRiver)
+            {
+                _specialIndex = value;
+                RemoveRoads();
+                RefreshSelfOnly();
+            }
+        }
+    }
+
+    public bool IsSpecial
+    {
+        get { return _specialIndex > 0; }
     }
 
     #endregion

@@ -140,33 +140,6 @@ public class HexMapEditor : MonoBehaviour
         _activeSpecialIndex = (int) index;
     }
 
-    public void Save()
-    {
-        var path = Path.Combine(Application.persistentDataPath, "test.map");
-        using (var writer = new BinaryWriter(File.Open(path, FileMode.Create)))
-        {
-            writer.Write(0);
-            HexGrid.Save(writer);
-        }
-    }
-
-    public void Load()
-    {
-        var path = Path.Combine(Application.persistentDataPath, "test.map");
-        using (var reader = new BinaryReader(File.OpenRead(path)))
-        {
-            var header = reader.ReadInt32();
-            if (header == 0)
-            {
-                HexGrid.Load(reader);
-            }
-            else
-            {
-                Debug.LogWarning("Unknown map format " + header);
-            }
-        }
-    }
-
     #endregion
 
     private void HandleInput()

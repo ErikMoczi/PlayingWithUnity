@@ -1,17 +1,16 @@
-﻿using UnityEngine;
+﻿using System.IO;
+using UnityEngine;
 using UnityEngine.EventSystems;
 
 public class HexMapEditor : MonoBehaviour
 {
-    public Color[] Colors;
     public HexGrid HexGrid;
 
     private HexDirection _dragDirection;
     private HexCell _previousCell;
     private bool _isDrag;
 
-    private Color _activeColor;
-    private bool _applyColor;
+    private int _activeTerrainTypeIndex;
 
     private int _activeElevation;
     private bool _applyElevation;
@@ -35,11 +34,6 @@ public class HexMapEditor : MonoBehaviour
 
     #region Unity
 
-    private void Awake()
-    {
-        SelectColor(0);
-    }
-
     private void Update()
     {
         if (Input.GetMouseButton(0) && !EventSystem.current.IsPointerOverGameObject())
@@ -56,13 +50,9 @@ public class HexMapEditor : MonoBehaviour
 
     #region UIActions
 
-    public void SelectColor(int index)
+    public void SetTerrainTypeIndex(int index)
     {
-        _applyColor = index >= 0;
-        if (_applyColor)
-        {
-            _activeColor = Colors[index];
-        }
+        _activeTerrainTypeIndex = index;
     }
 
     public void SetElevation(float elevation)
@@ -150,6 +140,33 @@ public class HexMapEditor : MonoBehaviour
         _activeSpecialIndex = (int) index;
     }
 
+    public void Save()
+    {
+        var path = Path.Combine(Application.persistentDataPath, "test.map");
+        using (var writer = new BinaryWriter(File.Open(path, FileMode.Create)))
+        {
+            writer.Write(0);
+            HexGrid.Save(writer);
+        }
+    }
+
+    public void Load()
+    {
+        var path = Path.Combine(Application.persistentDataPath, "test.map");
+        using (var reader = new BinaryReader(File.OpenRead(path)))
+        {
+            var header = reader.ReadInt32();
+            if (header == 0)
+            {
+                HexGrid.Load(reader);
+            }
+            else
+            {
+                Debug.LogWarning("Unknown map format " + header);
+            }
+        }
+    }
+
     #endregion
 
     private void HandleInput()
@@ -203,9 +220,9 @@ public class HexMapEditor : MonoBehaviour
     {
         if (cell)
         {
-            if (_applyColor)
+            if (_activeTerrainTypeIndex >= 0)
             {
-                cell.Color = _activeColor;
+                cell.TerrainTypeIndex = _activeTerrainTypeIndex;
             }
 
             if (_applyElevation)

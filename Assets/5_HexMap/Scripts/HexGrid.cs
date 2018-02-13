@@ -1,15 +1,16 @@
-﻿using UnityEngine;
+﻿using System.IO;
+using UnityEngine;
 using UnityEngine.UI;
 
 public class HexGrid : MonoBehaviour
 {
     public int ChunkCountX = 4, ChunkCountZ = 3;
-    public Color DefaultColor = Color.white;
     public HexCell CellPrefab;
     public Text CellLabelPrefab;
     public HexGridChunk ChunkPrefab;
     public Texture2D NoiseSource;
     public int Seed;
+    public Color[] Colors;
 
     private int _cellCountX;
     private int _cellCountZ;
@@ -22,6 +23,7 @@ public class HexGrid : MonoBehaviour
     {
         HexMetrics.NoiseSource = NoiseSource;
         HexMetrics.InitializeHashGrid(Seed);
+        HexMetrics.Colors = Colors;
 
         _cellCountX = ChunkCountX * HexMetrics.ChunkSizeX;
         _cellCountZ = ChunkCountZ * HexMetrics.ChunkSizeZ;
@@ -36,6 +38,7 @@ public class HexGrid : MonoBehaviour
         {
             HexMetrics.NoiseSource = NoiseSource;
             HexMetrics.InitializeHashGrid(Seed);
+            HexMetrics.Colors = Colors;
         }
     }
 
@@ -120,7 +123,6 @@ public class HexGrid : MonoBehaviour
         var cellTransform = cell.transform;
         cellTransform.localPosition = position;
         cell.Coordinates = HexCoordinates.FromOffsetCoordinates(x, z);
-        cell.Color = DefaultColor;
 
         if (x > 0)
         {
@@ -171,6 +173,31 @@ public class HexGrid : MonoBehaviour
         label.rectTransform.anchoredPosition = new Vector2(position.x, position.z);
         label.text = cell.Coordinates.ToStringOnSeparateLines();
         cell.UIRect = label.rectTransform;
+    }
+
+    #endregion
+
+    #region SaveLoad
+
+    public void Save(BinaryWriter writer)
+    {
+        for (int i = 0; i < _cells.Length; i++)
+        {
+            _cells[i].Save(writer);
+        }
+    }
+
+    public void Load(BinaryReader reader)
+    {
+        for (int i = 0; i < _cells.Length; i++)
+        {
+            _cells[i].Load(reader);
+        }
+
+        for (int i = 0; i < _chunks.Length; i++)
+        {
+            _chunks[i].Refresh();
+        }
     }
 
     #endregion

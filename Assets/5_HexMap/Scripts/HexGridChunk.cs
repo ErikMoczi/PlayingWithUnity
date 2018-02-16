@@ -21,7 +21,6 @@ public class HexGridChunk : MonoBehaviour
         Terrain = GetComponentInChildren<HexMesh>();
 
         _cells = new HexCell[HexMetrics.ChunkSizeX * HexMetrics.ChunkSizeZ];
-        ShowUI(false);
     }
 
     private void LateUpdate()

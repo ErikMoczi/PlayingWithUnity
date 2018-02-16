@@ -5,6 +5,7 @@ using UnityEngine.EventSystems;
 public class HexMapEditor : MonoBehaviour
 {
     public HexGrid HexGrid;
+    public Material TerrainMaterial;
 
     private HexDirection _dragDirection;
     private HexCell _previousCell;
@@ -23,6 +24,8 @@ public class HexMapEditor : MonoBehaviour
     private int _activeUrbanLevel, _activeFarmLevel, _activePlantLevel, _activeSpecialIndex;
     private bool _applyUrbanLevel, _applyFarmLevel, _applyPlantLevel, _applySpecialIndex;
 
+    private bool _editMode;
+
     private enum OptionalToggle
     {
         Ignore,
@@ -33,6 +36,11 @@ public class HexMapEditor : MonoBehaviour
     private OptionalToggle _riverMode, _roadMode, _walledMode;
 
     #region Unity
+
+    private void Awake()
+    {
+        TerrainMaterial.DisableKeyword("GRID_ON");
+    }
 
     private void Update()
     {
@@ -68,11 +76,6 @@ public class HexMapEditor : MonoBehaviour
     public void SetBrushSize(float size)
     {
         _brushSize = (int) size;
-    }
-
-    public void ShowUI(bool visible)
-    {
-        HexGrid.ShowUI(visible);
     }
 
     public void SetRiverMode(int mode)
@@ -140,6 +143,24 @@ public class HexMapEditor : MonoBehaviour
         _activeSpecialIndex = (int) index;
     }
 
+    public void ShowGrid(bool visible)
+    {
+        if (visible)
+        {
+            TerrainMaterial.EnableKeyword("GRID_ON");
+        }
+        else
+        {
+            TerrainMaterial.DisableKeyword("GRID_ON");
+        }
+    }
+
+    public void SetEditMode(bool toggle)
+    {
+        _editMode = toggle;
+        HexGrid.ShowUI(!toggle);
+    }
+
     #endregion
 
     private void HandleInput()
@@ -158,7 +179,15 @@ public class HexMapEditor : MonoBehaviour
                 _isDrag = false;
             }
 
-            EditCells(currentCell);
+            if (_editMode)
+            {
+                EditCells(currentCell);
+            }
+            else
+            {
+                HexGrid.FindDistancesTo(currentCell);
+            }
+
             _previousCell = currentCell;
             _isDrag = true;
         }

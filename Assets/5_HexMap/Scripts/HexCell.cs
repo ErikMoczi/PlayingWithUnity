@@ -64,11 +64,6 @@ public class HexCell : MonoBehaviour
         }
     }
 
-    public Color Color
-    {
-        get { return HexMetrics.Colors[_terrainTypeIndex]; }
-    }
-
     public Vector3 Position
     {
         get { return transform.localPosition; }

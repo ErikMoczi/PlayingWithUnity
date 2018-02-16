@@ -10,7 +10,6 @@ public class HexGrid : MonoBehaviour
     public HexGridChunk ChunkPrefab;
     public Texture2D NoiseSource;
     public int Seed;
-    public Color[] Colors;
 
     private int _chunkCountX, _chunkCountZ;
     private HexCell[] _cells;
@@ -22,7 +21,6 @@ public class HexGrid : MonoBehaviour
     {
         HexMetrics.NoiseSource = NoiseSource;
         HexMetrics.InitializeHashGrid(Seed);
-        HexMetrics.Colors = Colors;
 
         CreateMap(CellCountX, CellCountZ);
     }
@@ -33,7 +31,6 @@ public class HexGrid : MonoBehaviour
         {
             HexMetrics.NoiseSource = NoiseSource;
             HexMetrics.InitializeHashGrid(Seed);
-            HexMetrics.Colors = Colors;
         }
     }
 

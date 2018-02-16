@@ -5,10 +5,10 @@ using UnityEngine;
 [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
 public class HexMesh : MonoBehaviour
 {
-    public bool UseCollider, UseColors, UseUVCoordinates, UseUV2Coordinates;
+    public bool UseCollider, UseColors, UseUVCoordinates, UseUV2Coordinates, UseTerrainTypes;
 
     private Mesh _hexMesh;
-    [NonSerialized] private List<Vector3> Vertices;
+    [NonSerialized] private List<Vector3> Vertices, _terrainTypes;
     [NonSerialized] private List<int> Triangles;
     [NonSerialized] private List<Color> Colors;
     [NonSerialized] private List<Vector2> UVs, UV2s;
@@ -33,6 +33,11 @@ public class HexMesh : MonoBehaviour
     {
         _hexMesh.Clear();
         Vertices = ListPool<Vector3>.Get();
+        if (UseTerrainTypes)
+        {
+            _terrainTypes = ListPool<Vector3>.Get();
+        }
+
         Triangles = ListPool<int>.Get();
         if (UseColors)
         {
@@ -70,6 +75,12 @@ public class HexMesh : MonoBehaviour
         {
             _hexMesh.SetUVs(1, UV2s);
             ListPool<Vector2>.Add(UV2s);
+        }
+
+        if (UseTerrainTypes)
+        {
+            _hexMesh.SetUVs(2, _terrainTypes);
+            ListPool<Vector3>.Add(_terrainTypes);
         }
 
         _hexMesh.SetTriangles(Triangles, 0);
@@ -117,6 +128,13 @@ public class HexMesh : MonoBehaviour
     public void AddTriangleUV2(Vector2 uv1, Vector2 uv2, Vector2 uv3)
     {
         UV2s.AddRange(new[] {uv1, uv2, uv3});
+    }
+
+    public void AddTriangleTerrainTypes(Vector3 types)
+    {
+        _terrainTypes.Add(types);
+        _terrainTypes.Add(types);
+        _terrainTypes.Add(types);
     }
 
     #endregion
@@ -185,6 +203,14 @@ public class HexMesh : MonoBehaviour
             new Vector2(uMin, vMax),
             new Vector2(uMax, vMax)
         });
+    }
+
+    public void AddQuadTerrainTypes(Vector3 types)
+    {
+        _terrainTypes.Add(types);
+        _terrainTypes.Add(types);
+        _terrainTypes.Add(types);
+        _terrainTypes.Add(types);
     }
 
     #endregion

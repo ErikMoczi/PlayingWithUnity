@@ -46,8 +46,6 @@ public static class HexMetrics
 
     #endregion
 
-    public static Color[] Colors;
-
     public static Texture2D NoiseSource;
 
     private static HexHash[] _hashGrid;

@@ -581,4 +581,34 @@ public class HexCell : MonoBehaviour
     }
 
     #endregion
+
+    #region Path
+
+    #region Properties
+
+    public HexCell PathFrom { get; set; }
+    public int SearchHeuristic { get; set; }
+    public HexCell NextWithSamePriority { get; set; }
+
+    public int SearchPriority
+    {
+        get { return _distance + SearchHeuristic; }
+    }
+
+    #endregion
+
+    public void DisableHighlight()
+    {
+        var highlight = UIRect.GetChild(0).GetComponent<Image>();
+        highlight.enabled = false;
+    }
+
+    public void EnableHighlight(Color color)
+    {
+        var highlight = UIRect.GetChild(0).GetComponent<Image>();
+        highlight.color = color;
+        highlight.enabled = true;
+    }
+
+    #endregion
 }

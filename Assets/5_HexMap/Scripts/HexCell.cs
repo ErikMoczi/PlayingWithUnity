@@ -565,19 +565,15 @@ public class HexCell : MonoBehaviour
     public int Distance
     {
         get { return _distance; }
-        set
-        {
-            _distance = value;
-            UpdateDistanceLabel();
-        }
+        set { _distance = value; }
     }
 
     #endregion
 
-    private void UpdateDistanceLabel()
+    public void SetLabel(string text)
     {
         var label = UIRect.GetComponent<Text>();
-        label.text = _distance == int.MaxValue ? "" : _distance.ToString();
+        label.text = text;
     }
 
     #endregion
@@ -589,6 +585,7 @@ public class HexCell : MonoBehaviour
     public HexCell PathFrom { get; set; }
     public int SearchHeuristic { get; set; }
     public HexCell NextWithSamePriority { get; set; }
+    public int SearchPhase { get; set; }
 
     public int SearchPriority
     {

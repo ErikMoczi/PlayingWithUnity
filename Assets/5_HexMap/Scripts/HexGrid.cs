@@ -1,5 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 using UnityEngine.UI;
@@ -10,16 +9,13 @@ public class HexGrid : MonoBehaviour
     public HexCell CellPrefab;
     public Text CellLabelPrefab;
     public HexGridChunk ChunkPrefab;
+    public HexUnit UnitPrefab;
     public Texture2D NoiseSource;
     public int Seed;
 
     private int _chunkCountX, _chunkCountZ;
     private HexCell[] _cells;
     private HexGridChunk[] _chunks;
-    private HexCellPriorityQueue _searchFrontier;
-    private int _searchFrontierPhase;
-    private HexCell _currentPathFrom, _currentPathTo;
-    private bool _currentPathExists;
 
     #region Unity
 
@@ -27,6 +23,7 @@ public class HexGrid : MonoBehaviour
     {
         HexMetrics.NoiseSource = NoiseSource;
         HexMetrics.InitializeHashGrid(Seed);
+        HexUnit.UnitPrefab = UnitPrefab;
 
         CreateMap(CellCountX, CellCountZ);
     }
@@ -37,6 +34,7 @@ public class HexGrid : MonoBehaviour
         {
             HexMetrics.NoiseSource = NoiseSource;
             HexMetrics.InitializeHashGrid(Seed);
+            HexUnit.UnitPrefab = UnitPrefab;
         }
     }
 
@@ -56,6 +54,7 @@ public class HexGrid : MonoBehaviour
         }
 
         ClearPath();
+        ClearUnits();
         if (_chunks != null)
         {
             for (int i = 0; i < _chunks.Length; i++)
@@ -126,6 +125,17 @@ public class HexGrid : MonoBehaviour
         }
 
         return _cells[x + z * CellCountX];
+    }
+
+    public HexCell GetCell(Ray ray)
+    {
+        RaycastHit hit;
+        if (Physics.Raycast(ray, out hit))
+        {
+            return GetCell(hit.point);
+        }
+
+        return null;
     }
 
     private void CreateCells()
@@ -216,11 +226,18 @@ public class HexGrid : MonoBehaviour
         {
             _cells[i].Save(writer);
         }
+
+        writer.Write(_units.Count);
+        for (int i = 0; i < _units.Count; i++)
+        {
+            _units[i].Save(writer);
+        }
     }
 
     public void Load(BinaryReader reader, int header)
     {
         ClearPath();
+        ClearUnits();
         int x = 20, z = 15;
         if (header >= 1)
         {
@@ -245,11 +262,34 @@ public class HexGrid : MonoBehaviour
         {
             _chunks[i].Refresh();
         }
+
+        if (header >= 2)
+        {
+            var unitCount = reader.ReadInt32();
+            for (int i = 0; i < unitCount; i++)
+            {
+                HexUnit.Load(reader, this);
+            }
+        }
     }
 
     #endregion
 
     #region Distance
+
+    #region Attributes
+
+    private HexCellPriorityQueue _searchFrontier;
+    private int _searchFrontierPhase;
+    private HexCell _currentPathFrom, _currentPathTo;
+    private bool _currentPathExists;
+
+    public bool HasPath
+    {
+        get { return _currentPathExists; }
+    }
+
+    #endregion
 
     public void FindPath(HexCell fromCell, HexCell toCell, int speed)
     {
@@ -294,7 +334,7 @@ public class HexGrid : MonoBehaviour
                     continue;
                 }
 
-                if (neighbor.IsUnderwater)
+                if (neighbor.IsUnderwater || neighbor.Unit)
                 {
                     continue;
                 }
@@ -366,7 +406,7 @@ public class HexGrid : MonoBehaviour
         _currentPathTo.EnableHighlight(Color.red);
     }
 
-    private void ClearPath()
+    public void ClearPath()
     {
         if (_currentPathExists)
         {
@@ -388,6 +428,40 @@ public class HexGrid : MonoBehaviour
         }
 
         _currentPathFrom = _currentPathTo = null;
+    }
+
+    #endregion
+
+    #region Units
+
+    #region Attributes
+
+    private List<HexUnit> _units = new List<HexUnit>();
+
+    #endregion
+
+    private void ClearUnits()
+    {
+        for (int i = 0; i < _units.Count; i++)
+        {
+            _units[i].Die();
+        }
+
+        _units.Clear();
+    }
+
+    public void AddUnit(HexUnit unit, HexCell location, float orientation)
+    {
+        _units.Add(unit);
+        unit.transform.SetParent(transform, false);
+        unit.Location = location;
+        unit.Orientation = orientation;
+    }
+
+    public void RemoveUnit(HexUnit unit)
+    {
+        _units.Remove(unit);
+        unit.Die();
     }
 
     #endregion

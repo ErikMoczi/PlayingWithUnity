@@ -369,12 +369,21 @@ public class HexCell : MonoBehaviour
                     neighbor.Chunk.Refresh();
                 }
             }
+
+            if (Unit)
+            {
+                Unit.ValidateLocation();
+            }
         }
     }
 
     private void RefreshSelfOnly()
     {
         Chunk.Refresh();
+        if (Unit)
+        {
+            Unit.ValidateLocation();
+        }
     }
 
     #endregion
@@ -606,6 +615,16 @@ public class HexCell : MonoBehaviour
         highlight.color = color;
         highlight.enabled = true;
     }
+
+    #endregion
+
+    #region Unit
+
+    #region Properties
+
+    public HexUnit Unit { get; set; }
+
+    #endregion
 
     #endregion
 }

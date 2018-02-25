@@ -16,6 +16,7 @@ public class HexGrid : MonoBehaviour
     private int _chunkCountX, _chunkCountZ;
     private HexCell[] _cells;
     private HexGridChunk[] _chunks;
+    private HexCellShaderData _cellShaderData;
 
     #region Unity
 
@@ -24,6 +25,7 @@ public class HexGrid : MonoBehaviour
         HexMetrics.NoiseSource = NoiseSource;
         HexMetrics.InitializeHashGrid(Seed);
         HexUnit.UnitPrefab = UnitPrefab;
+        _cellShaderData = gameObject.AddComponent<HexCellShaderData>();
 
         CreateMap(CellCountX, CellCountZ);
     }
@@ -68,6 +70,7 @@ public class HexGrid : MonoBehaviour
         _chunkCountX = CellCountX / HexMetrics.ChunkSizeX;
         _chunkCountZ = CellCountZ / HexMetrics.ChunkSizeZ;
 
+        _cellShaderData.Initialize(CellCountX, CellCountZ);
         CreateChunks();
         CreateCells();
 
@@ -159,9 +162,10 @@ public class HexGrid : MonoBehaviour
         position.z = z * (HexMetrics.OuterRadius * 1.5f);
 
         var cell = _cells[i] = Instantiate<HexCell>(CellPrefab);
-        var cellTransform = cell.transform;
-        cellTransform.localPosition = position;
+        cell.transform.localPosition = position;
         cell.Coordinates = HexCoordinates.FromOffsetCoordinates(x, z);
+        cell.Index = i;
+        cell.ShaderData = _cellShaderData;
 
         if (x > 0)
         {
@@ -471,6 +475,7 @@ public class HexGrid : MonoBehaviour
     public void AddUnit(HexUnit unit, HexCell location, float orientation)
     {
         _units.Add(unit);
+        unit.Grid = this;
         unit.transform.SetParent(transform, false);
         unit.Location = location;
         unit.Orientation = orientation;
@@ -480,6 +485,88 @@ public class HexGrid : MonoBehaviour
     {
         _units.Remove(unit);
         unit.Die();
+    }
+
+    #endregion
+
+    #region Visibility
+
+    public void IncreaseVisibility(HexCell fromCell, int range)
+    {
+        var cells = GetVisibleCells(fromCell, range);
+        for (int i = 0; i < cells.Count; i++)
+        {
+            cells[i].IncreaseVisibility();
+        }
+
+        ListPool<HexCell>.Add(cells);
+    }
+
+    public void DecreaseVisibility(HexCell fromCell, int range)
+    {
+        var cells = GetVisibleCells(fromCell, range);
+        for (int i = 0; i < cells.Count; i++)
+        {
+            cells[i].DecreaseVisibility();
+        }
+
+        ListPool<HexCell>.Add(cells);
+    }
+
+    private List<HexCell> GetVisibleCells(HexCell fromCell, int range)
+    {
+        var visibleCells = ListPool<HexCell>.Get();
+
+        _searchFrontierPhase += 2;
+        if (_searchFrontier == null)
+        {
+            _searchFrontier = new HexCellPriorityQueue();
+        }
+        else
+        {
+            _searchFrontier.Clear();
+        }
+
+        fromCell.SearchPhase = _searchFrontierPhase;
+        fromCell.Distance = 0;
+        _searchFrontier.Enqueue(fromCell);
+        while (_searchFrontier.Count > 0)
+        {
+            var current = _searchFrontier.Dequeue();
+            current.SearchPhase += 1;
+            visibleCells.Add(current);
+
+            for (var direction = HexDirection.NE; direction <= HexDirection.NW; direction++)
+            {
+                var neighbor = current.GetNeighbor(direction);
+                if (neighbor == null || neighbor.SearchPhase > _searchFrontierPhase)
+                {
+                    continue;
+                }
+
+                var distance = current.Distance + 1;
+                if (distance > range)
+                {
+                    continue;
+                }
+
+                if (neighbor.SearchPhase < _searchFrontierPhase)
+                {
+                    neighbor.SearchPhase = _searchFrontierPhase;
+                    neighbor.Distance = distance;
+                    neighbor.SearchHeuristic = 0;
+                    _searchFrontier.Enqueue(neighbor);
+                }
+                else if (distance < neighbor.Distance)
+                {
+                    var oldPriority = neighbor.SearchPriority;
+                    neighbor.Distance = distance;
+                    _searchFrontier.Change(neighbor, oldPriority);
+                }
+            }
+        }
+
+        return visibleCells;
     }
 
     #endregion

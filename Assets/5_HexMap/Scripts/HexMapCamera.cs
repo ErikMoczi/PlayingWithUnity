@@ -15,7 +15,6 @@ public class HexMapCamera : MonoBehaviour
 
     private void Awake()
     {
-        _instance = this;
         _swivel = transform.GetChild(0);
         _stick = _swivel.GetChild(0);
     }
@@ -40,6 +39,11 @@ public class HexMapCamera : MonoBehaviour
         {
             AdjustPosition(xDelta, zDelta);
         }
+    }
+
+    private void OnEnable()
+    {
+        _instance = this;
     }
 
     public static bool Locked
@@ -94,7 +98,7 @@ public class HexMapCamera : MonoBehaviour
         var xMax = (Grid.CellCountX - 0.5f) * (2f * HexMetrics.InnerRadius);
         position.x = Mathf.Clamp(position.x, 0f, xMax);
 
-        var zMax = (Grid.CellCountZ - 1f) * (1.5f * HexMetrics.OuterRadius);
+        var zMax = (Grid.CellCountZ - 1) * (1.5f * HexMetrics.OuterRadius);
         position.z = Mathf.Clamp(position.z, 0f, zMax);
 
         return position;

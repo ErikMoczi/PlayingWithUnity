@@ -60,10 +60,12 @@ public class HexCell : MonoBehaviour
             if (_terrainTypeIndex != value)
             {
                 _terrainTypeIndex = value;
-                Refresh();
+                ShaderData.RefreshTerrain(this);
             }
         }
     }
+
+    public int Index { get; set; }
 
     public Vector3 Position
     {
@@ -287,10 +289,7 @@ public class HexCell : MonoBehaviour
         {
             if (_roads[i])
             {
-                _roads[i] = false;
-                _neighbors[i]._roads[(int) ((HexDirection) i).Opposite()] = false;
-                _neighbors[i].RefreshSelfOnly();
-                RefreshSelfOnly();
+                SetRoad(i, false);
             }
         }
     }
@@ -521,6 +520,7 @@ public class HexCell : MonoBehaviour
     public void Load(BinaryReader reader)
     {
         _terrainTypeIndex = reader.ReadByte();
+        ShaderData.RefreshTerrain(this);
         _elevation = reader.ReadByte();
         RefreshPosition();
         _waterLevel = reader.ReadByte();
@@ -552,7 +552,7 @@ public class HexCell : MonoBehaviour
             _hasOutgoingRiver = false;
         }
 
-        var roadFlags = reader.ReadByte();
+        int roadFlags = reader.ReadByte();
         for (int i = 0; i < _roads.Length; i++)
         {
             _roads[i] = (roadFlags & (1 << i)) != 0;
@@ -625,6 +625,53 @@ public class HexCell : MonoBehaviour
     public HexUnit Unit { get; set; }
 
     #endregion
+
+    #endregion
+
+    #region Shader
+
+    #region Properties
+
+    public HexCellShaderData ShaderData { get; set; }
+
+    #endregion
+
+    #endregion
+
+    #region Visibility
+
+    #region Attributes
+
+    private int _visibility;
+
+    #endregion
+
+    #region Properties
+
+    public bool IsVisible
+    {
+        get { return _visibility > 0; }
+    }
+
+    #endregion
+
+    public void IncreaseVisibility()
+    {
+        _visibility += 1;
+        if (_visibility == 1)
+        {
+            ShaderData.RefreshVisibility(this);
+        }
+    }
+
+    public void DecreaseVisibility()
+    {
+        _visibility -= 1;
+        if (_visibility == 0)
+        {
+            ShaderData.RefreshVisibility(this);
+        }
+    }
 
     #endregion
 }

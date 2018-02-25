@@ -38,38 +38,6 @@ public class SaveLoadMenu : MonoBehaviour
         HexMapCamera.Locked = false;
     }
 
-    public void Save(string path)
-    {
-        using (var writer = new BinaryWriter(File.Open(path, FileMode.Create)))
-        {
-            writer.Write(2);
-            HexGrid.Save(writer);
-        }
-    }
-
-    public void Load(string path)
-    {
-        if (!File.Exists(path))
-        {
-            Debug.LogError("File does not exist " + path);
-            return;
-        }
-
-        using (var reader = new BinaryReader(File.OpenRead(path)))
-        {
-            var header = reader.ReadInt32();
-            if (header <= 2)
-            {
-                HexGrid.Load(reader, header);
-                HexMapCamera.ValidatePosition();
-            }
-            else
-            {
-                Debug.LogWarning("Unknown map format " + header);
-            }
-        }
-    }
-
     public void Delete()
     {
         var path = GetSelectedPath();
@@ -112,6 +80,38 @@ public class SaveLoadMenu : MonoBehaviour
         NameInput.text = name;
     }
 
+    private void Load(string path)
+    {
+        if (!File.Exists(path))
+        {
+            Debug.LogError("File does not exist " + path);
+            return;
+        }
+
+        using (var reader = new BinaryReader(File.OpenRead(path)))
+        {
+            var header = reader.ReadInt32();
+            if (header <= 2)
+            {
+                HexGrid.Load(reader, header);
+                HexMapCamera.ValidatePosition();
+            }
+            else
+            {
+                Debug.LogWarning("Unknown map format " + header);
+            }
+        }
+    }
+
+    private void Save(string path)
+    {
+        using (var writer = new BinaryWriter(File.Open(path, FileMode.Create)))
+        {
+            writer.Write(2);
+            HexGrid.Save(writer);
+        }
+    }
+
     private string GetSelectedPath()
     {
         var mapName = NameInput.text;
@@ -136,9 +136,8 @@ public class SaveLoadMenu : MonoBehaviour
         {
             var item = Instantiate(ItemPrefab);
             item.Menu = this;
-            item.MapName = paths[i];
-            item.transform.SetParent(ListContent, false);
             item.MapName = Path.GetFileNameWithoutExtension(paths[i]);
+            item.transform.SetParent(ListContent, false);
         }
     }
 }

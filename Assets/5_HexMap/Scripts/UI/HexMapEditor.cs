@@ -194,7 +194,6 @@ public class HexMapEditor : MonoBehaviour
             EditCells(currentCell);
 
             _previousCell = currentCell;
-            _isDrag = true;
         }
         else
         {

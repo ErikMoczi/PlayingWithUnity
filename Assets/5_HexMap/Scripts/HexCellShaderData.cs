@@ -51,7 +51,9 @@ public class HexCellShaderData : MonoBehaviour
 
     public void RefreshVisibility(HexCell cell)
     {
-        _cellTextureData[cell.Index].r = cell.IsVisible ? (byte) 255 : (byte) 0;
+        var index = cell.Index;
+        _cellTextureData[index].r = cell.IsVisible ? (byte) 255 : (byte) 0;
+        _cellTextureData[index].g = cell.IsExplored ? (byte) 255 : (byte) 0;
         enabled = true;
     }
 }

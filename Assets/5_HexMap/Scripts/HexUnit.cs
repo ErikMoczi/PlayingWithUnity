@@ -43,6 +43,11 @@ public class HexUnit : MonoBehaviour
         }
     }
 
+    public int Speed
+    {
+        get { return 24; }
+    }
+
     public HexGrid Grid { get; set; }
 
     private List<HexCell> _pathToTravel;
@@ -92,7 +97,7 @@ public class HexUnit : MonoBehaviour
 
     public bool IsValidDestination(HexCell cell)
     {
-        return !cell.IsUnderwater && !cell.Unit;
+        return cell.IsExplored && !cell.IsUnderwater && !cell.Unit;
     }
 
     public void Travel(List<HexCell> path)
@@ -103,6 +108,32 @@ public class HexUnit : MonoBehaviour
         _pathToTravel = path;
         StopAllCoroutines();
         StartCoroutine(TravelPath());
+    }
+
+    public int GetMoveCost(HexCell fromCell, HexCell toCell, HexDirection direction)
+    {
+        var edgeType = fromCell.GetEdgeType(toCell);
+        if (edgeType == HexEdgeType.Cliff)
+        {
+            return -1;
+        }
+
+        int moveCost;
+        if (fromCell.HasRoadThroughEdge(direction))
+        {
+            moveCost = 1;
+        }
+        else if (fromCell.Walled != toCell.Walled)
+        {
+            return -1;
+        }
+        else
+        {
+            moveCost = edgeType == HexEdgeType.Flat ? 5 : 10;
+            moveCost += toCell.UrbanLevel + toCell.FarmLevel + toCell.PlantLevel;
+        }
+
+        return moveCost;
     }
 
     private IEnumerator TravelPath()

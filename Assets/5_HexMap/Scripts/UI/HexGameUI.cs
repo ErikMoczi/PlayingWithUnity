@@ -35,6 +35,14 @@ public class HexGameUI : MonoBehaviour
         enabled = !toggle;
         Grid.ShowUI(!toggle);
         Grid.ClearPath();
+        if (toggle)
+        {
+            Shader.EnableKeyword("HEX_MAP_EDIT_MODE");
+        }
+        else
+        {
+            Shader.DisableKeyword("HEX_MAP_EDIT_MODE");
+        }
     }
 
     private bool UpdateCurrentCell()
@@ -65,7 +73,7 @@ public class HexGameUI : MonoBehaviour
         {
             if (_currentCell && _selectedUnit.IsValidDestination(_currentCell))
             {
-                Grid.FindPath(_selectedUnit.Location, _currentCell, 24);
+                Grid.FindPath(_selectedUnit.Location, _currentCell, _selectedUnit);
             }
             else
             {

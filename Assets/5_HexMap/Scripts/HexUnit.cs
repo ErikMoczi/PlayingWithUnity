@@ -9,7 +9,11 @@ public class HexUnit : MonoBehaviour
 
     private const float TravelSpeed = 4f;
     private const float RotationSpeed = 180f;
-    private const int VisionRange = 3;
+
+    public int VisionRange
+    {
+        get { return 3; }
+    }
 
     private HexCell _location, _currentTravelLocation;
 

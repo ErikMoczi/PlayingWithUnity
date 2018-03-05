@@ -22,7 +22,13 @@ public class HexCell : MonoBehaviour
                 return;
             }
 
+            var originalViewElevation = ViewElevation;
             _elevation = value;
+            if (ViewElevation != originalViewElevation)
+            {
+                ShaderData.ViewElevationChanged();
+            }
+
             RefreshPosition();
             ValidateRivers();
 
@@ -333,7 +339,13 @@ public class HexCell : MonoBehaviour
                 return;
             }
 
+            var originalViewElevation = ViewElevation;
             _waterLevel = value;
+            if (ViewElevation != originalViewElevation)
+            {
+                ShaderData.ViewElevationChanged();
+            }
+
             ValidateRivers();
             Refresh();
         }
@@ -647,6 +659,7 @@ public class HexCell : MonoBehaviour
     #region Attributes
 
     private int _visibility;
+    private bool _explored;
 
     #endregion
 
@@ -654,10 +667,16 @@ public class HexCell : MonoBehaviour
 
     public bool IsVisible
     {
-        get { return _visibility > 0; }
+        get { return _visibility > 0 && Explorable; }
     }
 
-    public bool IsExplored { get; private set; }
+    public bool IsExplored
+    {
+        get { return _explored && Explorable; }
+        private set { _explored = value; }
+    }
+
+    public bool Explorable { get; set; }
 
     #endregion
 
@@ -678,6 +697,20 @@ public class HexCell : MonoBehaviour
         {
             ShaderData.RefreshVisibility(this);
         }
+    }
+
+    public void ResetVisibility()
+    {
+        if (_visibility > 0)
+        {
+            _visibility = 0;
+            ShaderData.RefreshVisibility(this);
+        }
+    }
+
+    public int ViewElevation
+    {
+        get { return _elevation >= _waterLevel ? _elevation : _waterLevel; }
     }
 
     #endregion

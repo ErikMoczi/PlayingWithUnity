@@ -26,7 +26,7 @@ public class HexGrid : MonoBehaviour
         HexMetrics.InitializeHashGrid(Seed);
         HexUnit.UnitPrefab = UnitPrefab;
         _cellShaderData = gameObject.AddComponent<HexCellShaderData>();
-
+        _cellShaderData.Grid = this;
         CreateMap(CellCountX, CellCountZ);
     }
 
@@ -37,6 +37,7 @@ public class HexGrid : MonoBehaviour
             HexMetrics.NoiseSource = NoiseSource;
             HexMetrics.InitializeHashGrid(Seed);
             HexUnit.UnitPrefab = UnitPrefab;
+            ResetVisibility();
         }
     }
 
@@ -166,6 +167,7 @@ public class HexGrid : MonoBehaviour
         cell.Coordinates = HexCoordinates.FromOffsetCoordinates(x, z);
         cell.Index = i;
         cell.ShaderData = _cellShaderData;
+        cell.Explorable = x > 0 && z > 0 && x < CellCountX - 1 && z < CellCountZ - 1;
 
         if (x > 0)
         {
@@ -257,6 +259,9 @@ public class HexGrid : MonoBehaviour
             }
         }
 
+        var originalImmediateMode = _cellShaderData.ImmediateMode;
+        _cellShaderData.ImmediateMode = true;
+
         for (int i = 0; i < _cells.Length; i++)
         {
             _cells[i].Load(reader, header);
@@ -275,6 +280,8 @@ public class HexGrid : MonoBehaviour
                 HexUnit.Load(reader, this);
             }
         }
+
+        _cellShaderData.ImmediateMode = originalImmediateMode;
     }
 
     #endregion
@@ -499,6 +506,20 @@ public class HexGrid : MonoBehaviour
         ListPool<HexCell>.Add(cells);
     }
 
+    public void ResetVisibility()
+    {
+        for (int i = 0; i < _cells.Length; i++)
+        {
+            _cells[i].ResetVisibility();
+        }
+
+        for (int i = 0; i < _units.Count; i++)
+        {
+            HexUnit unit = _units[i];
+            IncreaseVisibility(unit.Location, unit.VisionRange);
+        }
+    }
+
     private List<HexCell> GetVisibleCells(HexCell fromCell, int range)
     {
         var visibleCells = ListPool<HexCell>.Get();
@@ -513,9 +534,11 @@ public class HexGrid : MonoBehaviour
             _searchFrontier.Clear();
         }
 
+        range += fromCell.ViewElevation;
         fromCell.SearchPhase = _searchFrontierPhase;
         fromCell.Distance = 0;
         _searchFrontier.Enqueue(fromCell);
+        HexCoordinates fromCoordinates = fromCell.Coordinates;
         while (_searchFrontier.Count > 0)
         {
             var current = _searchFrontier.Dequeue();
@@ -525,13 +548,14 @@ public class HexGrid : MonoBehaviour
             for (var direction = HexDirection.NE; direction <= HexDirection.NW; direction++)
             {
                 var neighbor = current.GetNeighbor(direction);
-                if (neighbor == null || neighbor.SearchPhase > _searchFrontierPhase)
+                if (neighbor == null || neighbor.SearchPhase > _searchFrontierPhase || !neighbor.Explorable)
                 {
                     continue;
                 }
 
                 var distance = current.Distance + 1;
-                if (distance > range)
+                if (distance + neighbor.ViewElevation > range ||
+                    distance > fromCoordinates.DistanceTo(neighbor.Coordinates))
                 {
                     continue;
                 }

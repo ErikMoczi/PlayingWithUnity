@@ -8941,7 +8941,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Grid: {fileID: 413446509}
-  Seed: 929396788
+  Seed: 1119657313
   UseFixedSeed: 1
   JitterProbability: 0.25
   ChunkSizeMin: 30
@@ -8952,6 +8952,11 @@ MonoBehaviour:
   WaterLevel: 3
   ElevationMinimum: -2
   ElevationMaximum: 8
+  MapBorderX: 5
+  MapBorderZ: 5
+  RegionBorder: 5
+  RegionCount: 1
+  ErosionPercentage: 100
 --- !u!4 &1368771924
 Transform:
   m_ObjectHideFlags: 0

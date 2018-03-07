@@ -38,7 +38,8 @@ public class HexMapEditor : MonoBehaviour
     private void Awake()
     {
         TerrainMaterial.DisableKeyword("GRID_ON");
-        SetEditMode(false);
+        Shader.EnableKeyword("HEX_MAP_EDIT_MODE");
+        SetEditMode(true);
     }
 
     private void Update()
@@ -212,7 +213,7 @@ public class HexMapEditor : MonoBehaviour
         var centerZ = center.Coordinates.Z;
         for (int r = 0, z = centerZ - _brushSize; z <= centerZ; r++, z++)
         {
-            for (int x = centerX - r; x <= centerX + _brushSize; x++)
+            for (var x = centerX - r; x <= centerX + _brushSize; x++)
             {
                 EditCell(HexGrid.GetCell(new HexCoordinates(x, z)));
             }
@@ -220,7 +221,7 @@ public class HexMapEditor : MonoBehaviour
 
         for (int r = 0, z = centerZ + _brushSize; z > centerZ; z--, r++)
         {
-            for (int x = centerX - _brushSize; x <= centerX + r; x++)
+            for (var x = centerX - _brushSize; x <= centerX + r; x++)
             {
                 EditCell(HexGrid.GetCell(new HexCoordinates(x, z)));
             }

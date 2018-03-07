@@ -28,7 +28,7 @@ public class HexCellShaderData : MonoBehaviour
             delta = 1;
         }
 
-        for (int i = 0; i < _transitioningCells.Count; i++)
+        for (var i = 0; i < _transitioningCells.Count; i++)
         {
             if (!UpdateCellData(_transitioningCells[i], delta))
             {
@@ -64,7 +64,7 @@ public class HexCellShaderData : MonoBehaviour
         }
         else
         {
-            for (int i = 0; i < _cellTextureData.Length; i++)
+            for (var i = 0; i < _cellTextureData.Length; i++)
             {
                 _cellTextureData[i] = new Color32(0, 0, 0, 0);
             }

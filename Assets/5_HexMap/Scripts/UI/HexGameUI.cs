@@ -8,7 +8,7 @@ public class HexGameUI : MonoBehaviour
     private HexCell _currentCell;
     private HexUnit _selectedUnit;
 
-    void Update()
+    private void Update()
     {
         if (!EventSystem.current.IsPointerOverGameObject())
         {

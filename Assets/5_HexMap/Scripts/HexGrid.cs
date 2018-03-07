@@ -60,7 +60,7 @@ public class HexGrid : MonoBehaviour
         ClearUnits();
         if (_chunks != null)
         {
-            for (int i = 0; i < _chunks.Length; i++)
+            for (var i = 0; i < _chunks.Length; i++)
             {
                 Destroy(_chunks[i].gameObject);
             }
@@ -83,7 +83,7 @@ public class HexGrid : MonoBehaviour
         _chunks = new HexGridChunk[_chunkCountX * _chunkCountZ];
         for (int z = 0, i = 0; z < _chunkCountZ; z++)
         {
-            for (int x = 0; x < _chunkCountX; x++)
+            for (var x = 0; x < _chunkCountX; x++)
             {
                 var chunk = _chunks[i++] = Instantiate(ChunkPrefab);
                 chunk.transform.SetParent(transform);
@@ -142,13 +142,23 @@ public class HexGrid : MonoBehaviour
         return null;
     }
 
+    public HexCell GetCell(int xOffset, int zOffset)
+    {
+        return _cells[xOffset + zOffset * CellCountX];
+    }
+
+    public HexCell GetCell(int cellIndex)
+    {
+        return _cells[cellIndex];
+    }
+
     private void CreateCells()
     {
         _cells = new HexCell[CellCountZ * CellCountX];
 
         for (int z = 0, i = 0; z < CellCountZ; z++)
         {
-            for (int x = 0; x < CellCountX; x++)
+            for (var x = 0; x < CellCountX; x++)
             {
                 CreateCell(x, z, i++);
             }
@@ -206,7 +216,7 @@ public class HexGrid : MonoBehaviour
 
     public void ShowUI(bool visible)
     {
-        for (int i = 0; i < _chunks.Length; i++)
+        for (var i = 0; i < _chunks.Length; i++)
         {
             _chunks[i].ShowUI(visible);
         }
@@ -228,13 +238,13 @@ public class HexGrid : MonoBehaviour
         writer.Write(CellCountX);
         writer.Write(CellCountZ);
 
-        for (int i = 0; i < _cells.Length; i++)
+        for (var i = 0; i < _cells.Length; i++)
         {
             _cells[i].Save(writer);
         }
 
         writer.Write(_units.Count);
-        for (int i = 0; i < _units.Count; i++)
+        for (var i = 0; i < _units.Count; i++)
         {
             _units[i].Save(writer);
         }
@@ -262,12 +272,12 @@ public class HexGrid : MonoBehaviour
         var originalImmediateMode = _cellShaderData.ImmediateMode;
         _cellShaderData.ImmediateMode = true;
 
-        for (int i = 0; i < _cells.Length; i++)
+        for (var i = 0; i < _cells.Length; i++)
         {
             _cells[i].Load(reader, header);
         }
 
-        for (int i = 0; i < _chunks.Length; i++)
+        for (var i = 0; i < _chunks.Length; i++)
         {
             _chunks[i].Refresh();
         }
@@ -275,7 +285,7 @@ public class HexGrid : MonoBehaviour
         if (header >= 2)
         {
             var unitCount = reader.ReadInt32();
-            for (int i = 0; i < unitCount; i++)
+            for (var i = 0; i < unitCount; i++)
             {
                 HexUnit.Load(reader, this);
             }
@@ -457,7 +467,7 @@ public class HexGrid : MonoBehaviour
 
     private void ClearUnits()
     {
-        for (int i = 0; i < _units.Count; i++)
+        for (var i = 0; i < _units.Count; i++)
         {
             _units[i].Die();
         }
@@ -498,7 +508,7 @@ public class HexGrid : MonoBehaviour
     public void DecreaseVisibility(HexCell fromCell, int range)
     {
         var cells = GetVisibleCells(fromCell, range);
-        for (int i = 0; i < cells.Count; i++)
+        for (var i = 0; i < cells.Count; i++)
         {
             cells[i].DecreaseVisibility();
         }
@@ -508,12 +518,12 @@ public class HexGrid : MonoBehaviour
 
     public void ResetVisibility()
     {
-        for (int i = 0; i < _cells.Length; i++)
+        for (var i = 0; i < _cells.Length; i++)
         {
             _cells[i].ResetVisibility();
         }
 
-        for (int i = 0; i < _units.Count; i++)
+        for (var i = 0; i < _units.Count; i++)
         {
             HexUnit unit = _units[i];
             IncreaseVisibility(unit.Location, unit.VisionRange);
@@ -538,7 +548,7 @@ public class HexGrid : MonoBehaviour
         fromCell.SearchPhase = _searchFrontierPhase;
         fromCell.Distance = 0;
         _searchFrontier.Enqueue(fromCell);
-        HexCoordinates fromCoordinates = fromCell.Coordinates;
+        var fromCoordinates = fromCell.Coordinates;
         while (_searchFrontier.Count > 0)
         {
             var current = _searchFrontier.Dequeue();

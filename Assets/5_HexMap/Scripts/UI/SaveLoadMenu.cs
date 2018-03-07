@@ -11,7 +11,7 @@ public class SaveLoadMenu : MonoBehaviour
     public SaveLoadItem ItemPrefab;
     public HexGrid HexGrid;
 
-    private const int mapFileVersion = 3;
+    private const int MapFileVersion = 4;
 
     private bool _saveMode;
 
@@ -93,7 +93,7 @@ public class SaveLoadMenu : MonoBehaviour
         using (var reader = new BinaryReader(File.OpenRead(path)))
         {
             var header = reader.ReadInt32();
-            if (header <= mapFileVersion)
+            if (header <= MapFileVersion)
             {
                 HexGrid.Load(reader, header);
                 HexMapCamera.ValidatePosition();
@@ -109,7 +109,7 @@ public class SaveLoadMenu : MonoBehaviour
     {
         using (var writer = new BinaryWriter(File.Open(path, FileMode.Create)))
         {
-            writer.Write(mapFileVersion);
+            writer.Write(MapFileVersion);
             HexGrid.Save(writer);
         }
     }
@@ -127,14 +127,14 @@ public class SaveLoadMenu : MonoBehaviour
 
     private void FillList()
     {
-        for (int i = 0; i < ListContent.childCount; i++)
+        for (var i = 0; i < ListContent.childCount; i++)
         {
             Destroy(ListContent.GetChild(i).gameObject);
         }
 
         var paths = Directory.GetFiles(Application.persistentDataPath, "*.map");
         Array.Sort(paths);
-        for (int i = 0; i < paths.Length; i++)
+        for (var i = 0; i < paths.Length; i++)
         {
             var item = Instantiate(ItemPrefab);
             item.Menu = this;

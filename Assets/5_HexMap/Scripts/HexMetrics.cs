@@ -169,7 +169,7 @@ public static class HexMetrics
         _hashGrid = new HexHash[HashGridSize * HashGridSize];
         var currentState = Random.state;
         Random.InitState(seed);
-        for (int i = 0; i < _hashGrid.Length; i++)
+        for (var i = 0; i < _hashGrid.Length; i++)
         {
             _hashGrid[i] = HexHash.Create();
         }

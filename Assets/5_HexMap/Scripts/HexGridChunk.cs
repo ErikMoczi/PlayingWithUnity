@@ -292,7 +292,7 @@ public class HexGridChunk : MonoBehaviour
         Terrain.AddTriangleUnperturbed(HexMetrics.Perturb(begin), v2, boundary);
         Terrain.AddTriangleCellData(indices, beginWeights, w2, boundaryWeights);
 
-        for (int i = 2; i < HexMetrics.TerraceSteps; i++)
+        for (var i = 2; i < HexMetrics.TerraceSteps; i++)
         {
             var v1 = v2;
             var w1 = w2;
@@ -369,7 +369,7 @@ public class HexGridChunk : MonoBehaviour
 
         TriangulateEdgeStrip(begin, _weights1, i1, e2, w2, i2, hasRoad);
 
-        for (int i = 2; i < HexMetrics.TerraceSteps; i++)
+        for (var i = 2; i < HexMetrics.TerraceSteps; i++)
         {
             var e1 = e2;
             var w1 = w2;
@@ -396,7 +396,7 @@ public class HexGridChunk : MonoBehaviour
         Terrain.AddTriangle(begin, v3, v4);
         Terrain.AddTriangleCellData(indices, _weights1, w3, w4);
 
-        for (int i = 2; i < HexMetrics.TerraceSteps; i++)
+        for (var i = 2; i < HexMetrics.TerraceSteps; i++)
         {
             var v1 = v3;
             var v2 = v4;

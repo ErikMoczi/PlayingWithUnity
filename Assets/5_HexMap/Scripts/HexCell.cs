@@ -269,7 +269,7 @@ public class HexCell : MonoBehaviour
     {
         get
         {
-            for (int i = 0; i < _roads.Length; i++)
+            for (var i = 0; i < _roads.Length; i++)
             {
                 if (_roads[i])
                 {
@@ -291,7 +291,7 @@ public class HexCell : MonoBehaviour
 
     public void RemoveRoads()
     {
-        for (int i = 0; i < _neighbors.Length; i++)
+        for (var i = 0; i < _neighbors.Length; i++)
         {
             if (_roads[i])
             {
@@ -372,7 +372,7 @@ public class HexCell : MonoBehaviour
         if (Chunk)
         {
             Chunk.Refresh();
-            for (int i = 0; i < _neighbors.Length; i++)
+            for (var i = 0; i < _neighbors.Length; i++)
             {
                 var neighbor = _neighbors[i];
                 if (neighbor != null && neighbor.Chunk != Chunk)
@@ -491,7 +491,7 @@ public class HexCell : MonoBehaviour
     public void Save(BinaryWriter writer)
     {
         writer.Write((byte) _terrainTypeIndex);
-        writer.Write((byte) _elevation);
+        writer.Write((byte) (_elevation + 127));
         writer.Write((byte) _waterLevel);
         writer.Write((byte) _urbanLevel);
         writer.Write((byte) _farmLevel);
@@ -518,7 +518,7 @@ public class HexCell : MonoBehaviour
         }
 
         var roadFlags = 0;
-        for (int i = 0; i < _roads.Length; i++)
+        for (var i = 0; i < _roads.Length; i++)
         {
             if (_roads[i])
             {
@@ -535,6 +535,11 @@ public class HexCell : MonoBehaviour
         _terrainTypeIndex = reader.ReadByte();
         ShaderData.RefreshTerrain(this);
         _elevation = reader.ReadByte();
+        if (header >= 4)
+        {
+            _elevation -= 127;
+        }
+
         RefreshPosition();
         _waterLevel = reader.ReadByte();
         _urbanLevel = reader.ReadByte();
@@ -566,7 +571,7 @@ public class HexCell : MonoBehaviour
         }
 
         int roadFlags = reader.ReadByte();
-        for (int i = 0; i < _roads.Length; i++)
+        for (var i = 0; i < _roads.Length; i++)
         {
             _roads[i] = (roadFlags & (1 << i)) != 0;
         }

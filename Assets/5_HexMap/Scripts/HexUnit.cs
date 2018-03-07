@@ -116,6 +116,11 @@ public class HexUnit : MonoBehaviour
 
     public int GetMoveCost(HexCell fromCell, HexCell toCell, HexDirection direction)
     {
+        if (!IsValidDestination(toCell))
+        {
+            return -1;
+        }
+
         var edgeType = fromCell.GetEdgeType(toCell);
         if (edgeType == HexEdgeType.Cliff)
         {
@@ -147,7 +152,7 @@ public class HexUnit : MonoBehaviour
         Grid.DecreaseVisibility(_currentTravelLocation ? _currentTravelLocation : _pathToTravel[0], VisionRange);
 
         var t = Time.deltaTime * TravelSpeed;
-        for (int i = 1; i < _pathToTravel.Count; i++)
+        for (var i = 1; i < _pathToTravel.Count; i++)
         {
             _currentTravelLocation = _pathToTravel[i];
             a = c;
@@ -197,7 +202,7 @@ public class HexUnit : MonoBehaviour
         if (angle > 0f)
         {
             var speed = RotationSpeed / angle;
-            for (float t = Time.deltaTime * speed; t < 1f; t += Time.deltaTime * speed)
+            for (var t = Time.deltaTime * speed; t < 1f; t += Time.deltaTime * speed)
             {
                 transform.localRotation = Quaternion.Slerp(fromRotation, toRotation, t);
                 yield return null;

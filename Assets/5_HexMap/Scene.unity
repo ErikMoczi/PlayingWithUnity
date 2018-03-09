@@ -3559,7 +3559,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   HexGrid: {fileID: 413446509}
-  MapGenerator: {fileID: 1368771923}
+  MapGenerator: {fileID: 0}
 --- !u!1 &600659903
 GameObject:
   m_ObjectHideFlags: 0
@@ -8941,7 +8941,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Grid: {fileID: 413446509}
-  Seed: 1119657313
+  Seed: 1208905299
   UseFixedSeed: 1
   JitterProbability: 0.25
   ChunkSizeMin: 30
@@ -8956,7 +8956,9 @@ MonoBehaviour:
   MapBorderZ: 5
   RegionBorder: 5
   RegionCount: 1
-  ErosionPercentage: 100
+  ErosionPercentage: 50
+  evaporation: 0.5
+  precipitationFactor: 0.25
 --- !u!4 &1368771924
 Transform:
   m_ObjectHideFlags: 0

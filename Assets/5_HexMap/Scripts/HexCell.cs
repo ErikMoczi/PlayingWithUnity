@@ -657,6 +657,11 @@ public class HexCell : MonoBehaviour
 
     #endregion
 
+    public void SetMapData(float data)
+    {
+        ShaderData.SetMapData(this, data);
+    }
+
     #endregion
 
     #region Visibility

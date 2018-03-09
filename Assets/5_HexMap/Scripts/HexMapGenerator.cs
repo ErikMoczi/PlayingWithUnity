@@ -23,6 +23,14 @@ public class HexMapGenerator : MonoBehaviour
     [Range(0, 10)] public int RegionBorder = 5;
     [Range(1, 4)] public int RegionCount = 1;
     [Range(0, 100)] public int ErosionPercentage = 50;
+    [Range(0f, 1f)] public float StartingMoisture = 0.1f;
+    [Range(0f, 1f)] public float Evaporation = 0.5f;
+    [Range(0f, 1f)] public float EvaporationFactor = 0.5f;
+    [Range(0f, 1f)] public float PrecipitationFactor = 0.25f;
+    [Range(0f, 1f)] public float RunoffFactor = 0.25f;
+    [Range(0f, 1f)] public float SeepageFactor = 0.125f;
+    public HexDirection WindDirection = HexDirection.NW;
+    [Range(1f, 10f)] public float WindStrength = 4f;
 
     private int _cellCount;
     private HexCellPriorityQueue _searchFrontier;
@@ -34,6 +42,14 @@ public class HexMapGenerator : MonoBehaviour
     }
 
     private List<MapRegion> _regions;
+
+    private struct ClimateData
+    {
+        public float Clouds, Moisture;
+    }
+
+    private List<ClimateData> _climate = new List<ClimateData>();
+    private List<ClimateData> _nextClimate = new List<ClimateData>();
 
     public void GenerateMap(int x, int z)
     {
@@ -63,6 +79,7 @@ public class HexMapGenerator : MonoBehaviour
         CreateRegions();
         CreateLand();
         ErodeLand();
+        CreateClimate();
         SetTerrainType();
 
         for (var i = 0; i < _cellCount; i++)
@@ -343,15 +360,143 @@ public class HexMapGenerator : MonoBehaviour
         ListPool<HexCell>.Add(erodibleCells);
     }
 
+    private void CreateClimate()
+    {
+        _climate.Clear();
+        _nextClimate.Clear();
+        var initialData = new ClimateData();
+        initialData.Moisture = StartingMoisture;
+        var clearData = new ClimateData();
+        for (var i = 0; i < _cellCount; i++)
+        {
+            _climate.Add(initialData);
+            _nextClimate.Add(clearData);
+        }
+
+        for (var cycle = 0; cycle < 40; cycle++)
+        {
+            for (var i = 0; i < _cellCount; i++)
+            {
+                EvolveClimate(i);
+            }
+
+            var swap = _climate;
+            _climate = _nextClimate;
+            _nextClimate = swap;
+        }
+    }
+
+    private void EvolveClimate(int cellIndex)
+    {
+        var cell = Grid.GetCell(cellIndex);
+        var cellClimate = _climate[cellIndex];
+
+        if (cell.IsUnderwater)
+        {
+            cellClimate.Moisture = 1f;
+            cellClimate.Clouds += EvaporationFactor;
+        }
+        else
+        {
+            var evaporation = cellClimate.Moisture * EvaporationFactor;
+            cellClimate.Moisture -= evaporation;
+            cellClimate.Clouds += evaporation;
+        }
+
+        var precipitation = cellClimate.Clouds * PrecipitationFactor;
+        cellClimate.Clouds -= precipitation;
+        cellClimate.Moisture += precipitation;
+
+        var cloudMaximum = 1f - cell.ViewElevation / (ElevationMaximum + 1f);
+        if (cellClimate.Clouds > cloudMaximum)
+        {
+            cellClimate.Moisture += cellClimate.Clouds - cloudMaximum;
+            cellClimate.Clouds = cloudMaximum;
+        }
+
+        var mainDispersalDirection = WindDirection.Opposite();
+        var cloudDispersal = cellClimate.Clouds * (1f / (5f + WindStrength));
+        var runoff = cellClimate.Moisture * RunoffFactor * (1f / 6f);
+        var seepage = cellClimate.Moisture * SeepageFactor * (1f / 6f);
+        for (var d = HexDirection.NE; d <= HexDirection.NW; d++)
+        {
+            var neighbor = cell.GetNeighbor(d);
+            if (!neighbor)
+            {
+                continue;
+            }
+
+            var neighborClimate = _nextClimate[neighbor.Index];
+            if (d == mainDispersalDirection)
+            {
+                neighborClimate.Clouds += cloudDispersal * WindStrength;
+            }
+            else
+            {
+                neighborClimate.Clouds += cloudDispersal;
+            }
+
+            var elevationDelta = neighbor.ViewElevation - cell.ViewElevation;
+            if (elevationDelta < 0)
+            {
+                cellClimate.Moisture -= runoff;
+                neighborClimate.Moisture += runoff;
+            }
+            else if (elevationDelta == 0)
+            {
+                cellClimate.Moisture -= seepage;
+                neighborClimate.Moisture += seepage;
+            }
+
+            _nextClimate[neighbor.Index] = neighborClimate;
+        }
+
+        var nextCellClimate = _nextClimate[cellIndex];
+        nextCellClimate.Moisture += cellClimate.Moisture;
+        if (nextCellClimate.Moisture > 1f)
+        {
+            nextCellClimate.Moisture = 1f;
+        }
+
+        _nextClimate[cellIndex] = nextCellClimate;
+        _climate[cellIndex] = new ClimateData();
+    }
+
     private void SetTerrainType()
     {
         for (var i = 0; i < _cellCount; i++)
         {
             var cell = Grid.GetCell(i);
+            var moisture = _climate[i].Moisture;
             if (!cell.IsUnderwater)
             {
-                cell.TerrainTypeIndex = cell.Elevation - cell.WaterLevel;
+                if (moisture < 0.05f)
+                {
+                    cell.TerrainTypeIndex = 4;
+                }
+                else if (moisture < 0.12f)
+                {
+                    cell.TerrainTypeIndex = 0;
+                }
+                else if (moisture < 0.28f)
+                {
+                    cell.TerrainTypeIndex = 3;
+                }
+                else if (moisture < 0.85f)
+                {
+                    cell.TerrainTypeIndex = 1;
+                }
+                else
+                {
+                    cell.TerrainTypeIndex = 2;
+                }
             }
+            else
+            {
+                cell.TerrainTypeIndex = 2;
+            }
+
+            cell.SetMapData(moisture);
         }
     }
 

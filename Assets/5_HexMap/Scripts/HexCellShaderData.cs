@@ -103,6 +103,12 @@ public class HexCellShaderData : MonoBehaviour
         enabled = true;
     }
 
+    public void SetMapData(HexCell cell, float data)
+    {
+        _cellTextureData[cell.Index].b = data < 0f ? (byte) 0 : (data < 1f ? (byte) (data * 254f) : (byte) 254);
+        enabled = true;
+    }
+
     private bool UpdateCellData(HexCell cell, int delta)
     {
         var index = cell.Index;

@@ -5,6 +5,9 @@ using Random = UnityEngine.Random;
 
 public class HexMapGenerator : MonoBehaviour
 {
+    private static float[] _temperatureBands = {0.1f, 0.3f, 0.6f};
+    private static float[] _moistureBands = {0.12f, 0.28f, 0.85f};
+
     public HexGrid Grid;
     public int Seed;
     public bool UseFixedSeed;
@@ -24,15 +27,28 @@ public class HexMapGenerator : MonoBehaviour
     [Range(1, 4)] public int RegionCount = 1;
     [Range(0, 100)] public int ErosionPercentage = 50;
     [Range(0f, 1f)] public float StartingMoisture = 0.1f;
-    [Range(0f, 1f)] public float Evaporation = 0.5f;
     [Range(0f, 1f)] public float EvaporationFactor = 0.5f;
     [Range(0f, 1f)] public float PrecipitationFactor = 0.25f;
     [Range(0f, 1f)] public float RunoffFactor = 0.25f;
     [Range(0f, 1f)] public float SeepageFactor = 0.125f;
     public HexDirection WindDirection = HexDirection.NW;
     [Range(1f, 10f)] public float WindStrength = 4f;
+    [Range(0, 20)] public int RiverPercentage = 10;
+    [Range(0f, 1f)] public float ExtraLakeProbability = 0.25f;
+    [Range(0f, 1f)] public float LowTemperature = 0f;
+    [Range(0f, 1f)] public float HighTemperature = 1f;
 
-    private int _cellCount;
+    public enum HemisphereMode
+    {
+        Both,
+        North,
+        South
+    }
+
+    public HemisphereMode Hemisphere;
+    [Range(0f, 1f)] public float TemperatureJitter = 0.1f;
+
+    private int _cellCount, _landCells;
     private HexCellPriorityQueue _searchFrontier;
     private int _searchFrontierPhase;
 
@@ -50,6 +66,28 @@ public class HexMapGenerator : MonoBehaviour
 
     private List<ClimateData> _climate = new List<ClimateData>();
     private List<ClimateData> _nextClimate = new List<ClimateData>();
+    private List<HexDirection> _flowDirections = new List<HexDirection>();
+
+    private int _temperatureJitterChannel;
+
+    private struct Biome
+    {
+        public int Terrain, Plant;
+
+        public Biome(int terrain, int plant)
+        {
+            Terrain = terrain;
+            Plant = plant;
+        }
+    }
+
+    private static Biome[] _biomes =
+    {
+        new Biome(0, 0), new Biome(4, 0), new Biome(4, 0), new Biome(4, 0),
+        new Biome(0, 0), new Biome(2, 0), new Biome(2, 1), new Biome(2, 2),
+        new Biome(0, 0), new Biome(1, 0), new Biome(1, 1), new Biome(1, 2),
+        new Biome(0, 0), new Biome(1, 1), new Biome(1, 2), new Biome(1, 3)
+    };
 
     public void GenerateMap(int x, int z)
     {
@@ -80,6 +118,7 @@ public class HexMapGenerator : MonoBehaviour
         CreateLand();
         ErodeLand();
         CreateClimate();
+        CreateRivers();
         SetTerrainType();
 
         for (var i = 0; i < _cellCount; i++)
@@ -179,6 +218,7 @@ public class HexMapGenerator : MonoBehaviour
     private void CreateLand()
     {
         var landBudget = Mathf.RoundToInt(_cellCount * LandPercentage * 0.01f);
+        _landCells = landBudget;
         for (var guard = 0; guard < 10000; guard++)
         {
             var sink = Random.value < SinkProbability;
@@ -204,6 +244,7 @@ public class HexMapGenerator : MonoBehaviour
         if (landBudget > 0)
         {
             Debug.LogWarning("Failed to use up " + landBudget + " land budget.");
+            _landCells -= landBudget;
         }
     }
 
@@ -360,6 +401,39 @@ public class HexMapGenerator : MonoBehaviour
         ListPool<HexCell>.Add(erodibleCells);
     }
 
+    private bool IsErodible(HexCell cell)
+    {
+        var erodibleElevation = cell.Elevation - 2;
+        for (var d = HexDirection.NE; d <= HexDirection.NW; d++)
+        {
+            var neighbor = cell.GetNeighbor(d);
+            if (neighbor && neighbor.Elevation <= erodibleElevation)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private HexCell GetErosionTarget(HexCell cell)
+    {
+        var candidates = ListPool<HexCell>.Get();
+        var erodibleElevation = cell.Elevation - 2;
+        for (var d = HexDirection.NE; d <= HexDirection.NW; d++)
+        {
+            var neighbor = cell.GetNeighbor(d);
+            if (neighbor && neighbor.Elevation <= erodibleElevation)
+            {
+                candidates.Add(neighbor);
+            }
+        }
+
+        var target = candidates[Random.Range(0, candidates.Count)];
+        ListPool<HexCell>.Add(candidates);
+        return target;
+    }
+
     private void CreateClimate()
     {
         _climate.Clear();
@@ -462,75 +536,306 @@ public class HexMapGenerator : MonoBehaviour
         _climate[cellIndex] = new ClimateData();
     }
 
-    private void SetTerrainType()
+    private void CreateRivers()
     {
+        var riverOrigins = ListPool<HexCell>.Get();
         for (var i = 0; i < _cellCount; i++)
         {
             var cell = Grid.GetCell(i);
+            if (cell.IsUnderwater)
+            {
+                continue;
+            }
+
+            var data = _climate[i];
+            var weight = data.Moisture * (cell.Elevation - WaterLevel) / (ElevationMaximum - WaterLevel);
+            if (weight > 0.75f)
+            {
+                riverOrigins.Add(cell);
+                riverOrigins.Add(cell);
+            }
+
+            if (weight > 0.5f)
+            {
+                riverOrigins.Add(cell);
+            }
+
+            if (weight > 0.25f)
+            {
+                riverOrigins.Add(cell);
+            }
+        }
+
+        var riverBudget = Mathf.RoundToInt(_landCells * RiverPercentage * 0.01f);
+        while (riverBudget > 0 && riverOrigins.Count > 0)
+        {
+            var index = Random.Range(0, riverOrigins.Count);
+            var lastIndex = riverOrigins.Count - 1;
+            var origin = riverOrigins[index];
+            riverOrigins[index] = riverOrigins[lastIndex];
+            riverOrigins.RemoveAt(lastIndex);
+
+            if (!origin.HasRiver)
+            {
+                var isValidOrigin = true;
+                for (var d = HexDirection.NE; d <= HexDirection.NW; d++)
+                {
+                    var neighbor = origin.GetNeighbor(d);
+                    if (neighbor && (neighbor.HasRiver || neighbor.IsUnderwater))
+                    {
+                        isValidOrigin = false;
+                        break;
+                    }
+                }
+
+                if (isValidOrigin)
+                {
+                    riverBudget -= CreateRiver(origin);
+                }
+            }
+        }
+
+        if (riverBudget > 0)
+        {
+            Debug.LogWarning("Failed to use up river budget.");
+        }
+
+        ListPool<HexCell>.Add(riverOrigins);
+    }
+
+    private int CreateRiver(HexCell origin)
+    {
+        var length = 1;
+        var cell = origin;
+        var direction = HexDirection.NE;
+        while (!cell.IsUnderwater)
+        {
+            var minNeighborElevation = int.MaxValue;
+            _flowDirections.Clear();
+            for (var d = HexDirection.NE; d <= HexDirection.NW; d++)
+            {
+                var neighbor = cell.GetNeighbor(d);
+                if (!neighbor)
+                {
+                    continue;
+                }
+
+                if (neighbor.Elevation < minNeighborElevation)
+                {
+                    minNeighborElevation = neighbor.Elevation;
+                }
+
+                if (neighbor == origin || neighbor.HasIncomingRiver)
+                {
+                    continue;
+                }
+
+                var delta = neighbor.Elevation - cell.Elevation;
+                if (delta > 0)
+                {
+                    continue;
+                }
+
+                if (neighbor.HasOutgoingRiver)
+                {
+                    cell.SetOutgoingRiver(d);
+                    return length;
+                }
+
+                if (delta < 0)
+                {
+                    _flowDirections.Add(d);
+                    _flowDirections.Add(d);
+                    _flowDirections.Add(d);
+                }
+
+                if (
+                    length == 1 ||
+                    (d != direction.Next2() && d != direction.Previous2())
+                )
+                {
+                    _flowDirections.Add(d);
+                }
+
+                _flowDirections.Add(d);
+            }
+
+            if (_flowDirections.Count == 0)
+            {
+                if (length == 1)
+                {
+                    return 0;
+                }
+
+                if (minNeighborElevation >= cell.Elevation)
+                {
+                    cell.WaterLevel = minNeighborElevation;
+                    if (minNeighborElevation == cell.Elevation)
+                    {
+                        cell.Elevation = minNeighborElevation - 1;
+                    }
+                }
+
+                break;
+            }
+
+            direction = _flowDirections[Random.Range(0, _flowDirections.Count)];
+            cell.SetOutgoingRiver(direction);
+            length += 1;
+
+            if (minNeighborElevation >= cell.Elevation && Random.value < ExtraLakeProbability)
+            {
+                cell.WaterLevel = cell.Elevation;
+                cell.Elevation -= 1;
+            }
+
+            cell = cell.GetNeighbor(direction);
+        }
+
+        return length;
+    }
+
+    private void SetTerrainType()
+    {
+        _temperatureJitterChannel = Random.Range(0, 4);
+        var rockDesertElevation = ElevationMaximum - (ElevationMaximum - WaterLevel) / 2;
+        for (var i = 0; i < _cellCount; i++)
+        {
+            var cell = Grid.GetCell(i);
+            var temperature = DetermineTemperature(cell);
             var moisture = _climate[i].Moisture;
             if (!cell.IsUnderwater)
             {
-                if (moisture < 0.05f)
+                var t = 0;
+                for (; t < _temperatureBands.Length; t++)
                 {
-                    cell.TerrainTypeIndex = 4;
+                    if (temperature < _temperatureBands[t])
+                    {
+                        break;
+                    }
                 }
-                else if (moisture < 0.12f)
+
+                var m = 0;
+                for (; m < _moistureBands.Length; m++)
                 {
-                    cell.TerrainTypeIndex = 0;
+                    if (moisture < _moistureBands[m])
+                    {
+                        break;
+                    }
                 }
-                else if (moisture < 0.28f)
+
+                var cellBiome = _biomes[t * 4 + m];
+
+                if (cellBiome.Terrain == 0)
                 {
-                    cell.TerrainTypeIndex = 3;
+                    if (cell.Elevation >= rockDesertElevation)
+                    {
+                        cellBiome.Terrain = 3;
+                    }
                 }
-                else if (moisture < 0.85f)
+                else if (cell.Elevation == ElevationMaximum)
                 {
-                    cell.TerrainTypeIndex = 1;
+                    cellBiome.Terrain = 4;
                 }
-                else
+
+                if (cellBiome.Terrain == 4)
                 {
-                    cell.TerrainTypeIndex = 2;
+                    cellBiome.Plant = 0;
                 }
+                else if (cellBiome.Plant < 3 && cell.HasRiver)
+                {
+                    cellBiome.Plant += 1;
+                }
+
+                cell.TerrainTypeIndex = cellBiome.Terrain;
+                cell.PlantLevel = cellBiome.Plant;
             }
             else
             {
-                cell.TerrainTypeIndex = 2;
-            }
+                int terrain;
+                if (cell.Elevation == WaterLevel - 1)
+                {
+                    int cliffs = 0, slopes = 0;
+                    for (var d = HexDirection.NE; d <= HexDirection.NW; d++)
+                    {
+                        var neighbor = cell.GetNeighbor(d);
+                        if (!neighbor)
+                        {
+                            continue;
+                        }
 
-            cell.SetMapData(moisture);
+                        var delta = neighbor.Elevation - cell.WaterLevel;
+                        if (delta == 0)
+                        {
+                            slopes += 1;
+                        }
+                        else if (delta > 0)
+                        {
+                            cliffs += 1;
+                        }
+                    }
+
+                    if (cliffs + slopes > 3)
+                    {
+                        terrain = 1;
+                    }
+                    else if (cliffs > 0)
+                    {
+                        terrain = 3;
+                    }
+                    else if (slopes > 0)
+                    {
+                        terrain = 0;
+                    }
+                    else
+                    {
+                        terrain = 1;
+                    }
+                }
+                else if (cell.Elevation >= WaterLevel)
+                {
+                    terrain = 1;
+                }
+                else if (cell.Elevation < 0)
+                {
+                    terrain = 3;
+                }
+                else
+                {
+                    terrain = 2;
+                }
+
+                if (terrain == 1 && temperature < _temperatureBands[0])
+                {
+                    terrain = 2;
+                }
+
+                cell.TerrainTypeIndex = terrain;
+            }
         }
     }
 
-    private bool IsErodible(HexCell cell)
+    private float DetermineTemperature(HexCell cell)
     {
-        var erodibleElevation = cell.Elevation - 2;
-        for (var d = HexDirection.NE; d <= HexDirection.NW; d++)
+        var latitude = (float) cell.Coordinates.Z / Grid.CellCountZ;
+        if (Hemisphere == HemisphereMode.Both)
         {
-            var neighbor = cell.GetNeighbor(d);
-            if (neighbor && neighbor.Elevation <= erodibleElevation)
+            latitude *= 2f;
+            if (latitude > 1f)
             {
-                return true;
+                latitude = 2f - latitude;
             }
         }
-
-        return false;
-    }
-
-    private HexCell GetErosionTarget(HexCell cell)
-    {
-        var candidates = ListPool<HexCell>.Get();
-        var erodibleElevation = cell.Elevation - 2;
-        for (var d = HexDirection.NE; d <= HexDirection.NW; d++)
+        else if (Hemisphere == HemisphereMode.North)
         {
-            var neighbor = cell.GetNeighbor(d);
-            if (neighbor && neighbor.Elevation <= erodibleElevation)
-            {
-                candidates.Add(neighbor);
-            }
+            latitude = 1f - latitude;
         }
 
-        var target = candidates[Random.Range(0, candidates.Count)];
-        ListPool<HexCell>.Add(candidates);
-        return target;
+        var temperature = Mathf.LerpUnclamped(LowTemperature, HighTemperature, latitude);
+        temperature *= 1f - (cell.ViewElevation - WaterLevel) / (ElevationMaximum - WaterLevel + 1f);
+        var jitter = HexMetrics.SampleNoise(cell.Position * 0.1f)[_temperatureJitterChannel];
+        temperature += (jitter * 2f - 1f) * TemperatureJitter;
+        return temperature;
     }
 
     private HexCell GetRandomCell(MapRegion region)

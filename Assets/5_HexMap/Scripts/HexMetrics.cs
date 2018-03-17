@@ -10,6 +10,8 @@ public static class HexMetrics
     public const float OuterRadius = 10f;
     public const float InnerRadius = OuterRadius * OuterToInner;
 
+    public const float InnerDiameter = InnerRadius * 2f;
+
     public const float SolidFactor = 0.8f;
     public const float BlendFactor = 1f - SolidFactor;
 
@@ -43,6 +45,8 @@ public static class HexMetrics
     public const float WallTowerThreshold = 0.5f;
 
     public const float BridgeDesignLength = 7f;
+
+    public static int WrapSize;
 
     #endregion
 
@@ -133,7 +137,15 @@ public static class HexMetrics
 
     public static Vector4 SampleNoise(Vector3 position)
     {
-        return NoiseSource.GetPixelBilinear(position.x * NoiseScale, position.z * NoiseScale);
+        Vector4 sample = NoiseSource.GetPixelBilinear(position.x * NoiseScale, position.z * NoiseScale);
+        if (Wrapping && position.x < InnerDiameter * 1.5f)
+        {
+            Vector4 sample2 = NoiseSource.GetPixelBilinear((position.x + WrapSize * InnerDiameter) * NoiseScale,
+                position.z * NoiseScale);
+            sample = Vector4.Lerp(sample2, sample, position.x * (1f / InnerDiameter) - 0.5f);
+        }
+
+        return sample;
     }
 
     public static Vector3 GetSolidEdgeMiddle(HexDirection direction)
@@ -215,5 +227,10 @@ public static class HexMetrics
         var v = near.y < far.y ? WallElevationOffset : 1f - WallElevationOffset;
         near.y += (far.y - near.y) * v + WallYOffset;
         return near;
+    }
+
+    public static bool Wrapping
+    {
+        get { return WrapSize > 0; }
     }
 }

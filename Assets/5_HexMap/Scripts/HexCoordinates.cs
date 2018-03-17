@@ -26,6 +26,19 @@ public struct HexCoordinates
 
     public HexCoordinates(int x, int z)
     {
+        if (HexMetrics.Wrapping)
+        {
+            int oX = x + z / 2;
+            if (oX < 0)
+            {
+                x += HexMetrics.WrapSize;
+            }
+            else if (oX >= HexMetrics.WrapSize)
+            {
+                x -= HexMetrics.WrapSize;
+            }
+        }
+
         _x = x;
         _z = z;
     }
@@ -39,7 +52,7 @@ public struct HexCoordinates
 
     public static HexCoordinates FromPosition(Vector3 position)
     {
-        var x = position.x / (HexMetrics.InnerRadius * 2f);
+        var x = position.x / HexMetrics.InnerDiameter;
         var y = -x;
 
         var offset = position.z / (HexMetrics.OuterRadius * 3f);
@@ -79,11 +92,27 @@ public struct HexCoordinates
 
     public int DistanceTo(HexCoordinates other)
     {
-        return (
-                   (X < other.X ? other.X - X : X - other.X) +
-                   (Y < other.Y ? other.Y - Y : Y - other.Y) +
-                   (Z < other.Z ? other.Z - Z : Z - other.Z)
-               ) / 2;
+        var xy = (_x < other._x ? other._x - _x : _x - other._x) + (Y < other.Y ? other.Y - Y : Y - other.Y);
+        if (HexMetrics.Wrapping)
+        {
+            other._x += HexMetrics.WrapSize;
+            var xyWrapped = (_x < other._x ? other._x - _x : _x - other._x) + (Y < other.Y ? other.Y - Y : Y - other.Y);
+            if (xyWrapped < xy)
+            {
+                xy = xyWrapped;
+            }
+            else
+            {
+                other._x -= 2 * HexMetrics.WrapSize;
+                xyWrapped = (_x < other._x ? other._x - _x : _x - other._x) + (Y < other.Y ? other.Y - Y : Y - other.Y);
+                if (xyWrapped < xy)
+                {
+                    xy = xyWrapped;
+                }
+            }
+        }
+
+        return (xy + (Z < other.Z ? other.Z - Z : Z - other.Z)) / 2;
     }
 
     public void Save(BinaryWriter writer)

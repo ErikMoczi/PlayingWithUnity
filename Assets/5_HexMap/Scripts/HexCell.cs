@@ -105,6 +105,8 @@ public class HexCell : MonoBehaviour
         return difference >= 0 ? difference : -difference;
     }
 
+    public int ColumnIndex { get; set; }
+
     #region River
 
     #region Attributes

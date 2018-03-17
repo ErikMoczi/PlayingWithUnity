@@ -6,6 +6,7 @@ public class NewMapMenu : MonoBehaviour
     public HexMapGenerator MapGenerator;
 
     private bool _generateMaps = true;
+    private bool _wrapping = true;
 
     public void Open()
     {
@@ -23,11 +24,11 @@ public class NewMapMenu : MonoBehaviour
     {
         if (_generateMaps)
         {
-            MapGenerator.GenerateMap(x, z);
+            MapGenerator.GenerateMap(x, z, _wrapping);
         }
         else
         {
-            HexGrid.CreateMap(x, z);
+            HexGrid.CreateMap(x, z, _wrapping);
         }
 
         HexMapCamera.ValidatePosition();
@@ -52,5 +53,10 @@ public class NewMapMenu : MonoBehaviour
     public void ToggleMapGeneration(bool toggle)
     {
         _generateMaps = toggle;
+    }
+
+    public void ToggleWrapping(bool toggle)
+    {
+        _wrapping = toggle;
     }
 }

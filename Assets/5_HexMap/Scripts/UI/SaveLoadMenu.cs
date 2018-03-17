@@ -11,7 +11,7 @@ public class SaveLoadMenu : MonoBehaviour
     public SaveLoadItem ItemPrefab;
     public HexGrid HexGrid;
 
-    private const int MapFileVersion = 4;
+    private const int MapFileVersion = 5;
 
     private bool _saveMode;
 

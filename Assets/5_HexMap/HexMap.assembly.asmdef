@@ -1,6 +1,8 @@
 {
-    "name": "5.HexMap-CSharp",
+    "name": "5_HexMap-CSharp",
     "references": [],
+    "optionalUnityReferences": [],
     "includePlatforms": [],
-    "excludePlatforms": []
+    "excludePlatforms": [],
+    "allowUnsafeCode": false
 }

@@ -4,7 +4,9 @@ public delegate NoiseSample NoiseMethod (Vector3 point, float frequency);
 
 public enum NoiseMethodType {
 	Value,
-	Perlin
+	Perlin,
+	SimplexValue,
+	Simplex
 }
 
 public static class Noise {
@@ -21,9 +23,23 @@ public static class Noise {
 		Perlin3D
 	};
 
+	public static NoiseMethod[] simplexValueMethods = {
+		SimplexValue1D,
+		SimplexValue2D,
+		SimplexValue3D
+	};
+
+	public static NoiseMethod[] simplexMethods = {
+		Simplex1D,
+		Simplex2D,
+		Simplex3D
+	};
+
 	public static NoiseMethod[][] methods = {
 		valueMethods,
-		perlinMethods
+		perlinMethods,
+		simplexValueMethods,
+		simplexMethods
 	};
 
 	private static int[] hash = {
@@ -102,6 +118,45 @@ public static class Noise {
 		new Vector3( 0f,-1f, 1f),
 		new Vector3( 0f,-1f,-1f)
 	};
+
+	private static Vector3[] simplexGradients3D = {
+		new Vector3( 1f, 1f, 0f).normalized,
+		new Vector3(-1f, 1f, 0f).normalized,
+		new Vector3( 1f,-1f, 0f).normalized,
+		new Vector3(-1f,-1f, 0f).normalized,
+		new Vector3( 1f, 0f, 1f).normalized,
+		new Vector3(-1f, 0f, 1f).normalized,
+		new Vector3( 1f, 0f,-1f).normalized,
+		new Vector3(-1f, 0f,-1f).normalized,
+		new Vector3( 0f, 1f, 1f).normalized,
+		new Vector3( 0f,-1f, 1f).normalized,
+		new Vector3( 0f, 1f,-1f).normalized,
+		new Vector3( 0f,-1f,-1f).normalized,
+		
+		new Vector3( 1f, 1f, 0f).normalized,
+		new Vector3(-1f, 1f, 0f).normalized,
+		new Vector3( 1f,-1f, 0f).normalized,
+		new Vector3(-1f,-1f, 0f).normalized,
+		new Vector3( 1f, 0f, 1f).normalized,
+		new Vector3(-1f, 0f, 1f).normalized,
+		new Vector3( 1f, 0f,-1f).normalized,
+		new Vector3(-1f, 0f,-1f).normalized,
+		new Vector3( 0f, 1f, 1f).normalized,
+		new Vector3( 0f,-1f, 1f).normalized,
+		new Vector3( 0f, 1f,-1f).normalized,
+		new Vector3( 0f,-1f,-1f).normalized,
+		
+		new Vector3( 1f, 1f, 1f).normalized,
+		new Vector3(-1f, 1f, 1f).normalized,
+		new Vector3( 1f,-1f, 1f).normalized,
+		new Vector3(-1f,-1f, 1f).normalized,
+		new Vector3( 1f, 1f,-1f).normalized,
+		new Vector3(-1f, 1f,-1f).normalized,
+		new Vector3( 1f,-1f,-1f).normalized,
+		new Vector3(-1f,-1f,-1f).normalized
+	};
+	
+	private const int simplexGradientsMask3D = 31;
 	
 	private const int gradientsMask3D = 15;
 
@@ -122,6 +177,12 @@ public static class Noise {
 	}
 
 	private static float sqr2 = Mathf.Sqrt(2f);
+
+	private static float squaresToTriangles = (3f - Mathf.Sqrt(3f)) / 6f;
+	private static float trianglesToSquares = (Mathf.Sqrt(3f) - 1f) / 2f;
+
+	private static float simplexScale2D = 2916f * sqr2 / 125f;
+	private static float simplexScale3D = 8192f * Mathf.Sqrt(3f) / 375f;
 
 	public static NoiseSample Value1D (Vector3 point, float frequency) {
 		point *= frequency;
@@ -145,7 +206,7 @@ public static class Noise {
 		sample.derivative.y = 0f;
 		sample.derivative.z = 0f;
 		sample.derivative *= frequency;
-		return sample * (1f / hashMask);
+		return sample * (2f / hashMask) - 1f;
 	}
 
 	public static NoiseSample Value2D (Vector3 point, float frequency) {
@@ -182,7 +243,7 @@ public static class Noise {
 		sample.derivative.y = (c + d * tx) * dty;
 		sample.derivative.z = 0f;
 		sample.derivative *= frequency;
-		return sample * (1f / hashMask);
+		return sample * (2f / hashMask) - 1f;
 	}
 
 	public static NoiseSample Value3D (Vector3 point, float frequency) {
@@ -237,7 +298,7 @@ public static class Noise {
 		sample.derivative.y = (c + e * tx + (g + h * tx) * tz) * dty;
 		sample.derivative.z = (d + f * tx + (g + h * tx) * ty) * dtz;
 		sample.derivative *= frequency;
-		return sample * (1f / hashMask);
+		return sample * (2f / hashMask) - 1f;
 	}
 
 	public static NoiseSample Perlin1D (Vector3 point, float frequency) {
@@ -397,6 +458,261 @@ public static class Noise {
 		sample.derivative.z += (d + f * tx + (g + h * tx) * ty) * dtz;
 		sample.derivative *= frequency;
 		return sample;
+	}
+
+	private static NoiseSample SimplexValue1DPart (Vector3 point, int ix) {
+		float x = point.x - ix;
+		float f = 1f - x * x;
+		float f2 = f * f;
+		float f3 = f * f2;
+		float h = hash[ix & hashMask];
+		NoiseSample sample = new NoiseSample();
+		sample.value = h * f3;
+		sample.derivative.x = -6f * h * x * f2;
+		return sample;
+	}
+
+	public static NoiseSample SimplexValue1D (Vector3 point, float frequency) {
+		point *= frequency;
+		int ix = Mathf.FloorToInt(point.x);
+		NoiseSample sample = SimplexValue1DPart(point, ix);
+		sample += SimplexValue1DPart(point, ix + 1);
+		sample.derivative *= frequency;
+		return sample * (2f / hashMask) - 1f;
+	}
+
+	private static NoiseSample SimplexValue2DPart (Vector3 point, int ix, int iy) {
+		float unskew = (ix + iy) * squaresToTriangles;
+		float x = point.x - ix + unskew;
+		float y = point.y - iy + unskew;
+		float f = 0.5f - x * x - y * y;
+		NoiseSample sample = new NoiseSample();
+		if (f > 0f) {
+			float f2 = f * f;
+			float f3 = f * f2;
+			float h = hash[hash[ix & hashMask] + iy & hashMask];
+			float h6f2 = -6f * h * f2;
+			sample.value = h * f3;
+			sample.derivative.x = h6f2 * x;
+			sample.derivative.y = h6f2 * y;
+		}
+		return sample;
+	}
+
+	public static NoiseSample SimplexValue2D (Vector3 point, float frequency) {
+		point *= frequency;
+		float skew = (point.x + point.y) * trianglesToSquares;
+		float sx = point.x + skew;
+		float sy = point.y + skew;
+		int ix = Mathf.FloorToInt(sx);
+		int iy = Mathf.FloorToInt(sy);
+		NoiseSample sample = SimplexValue2DPart(point, ix, iy);
+		sample += SimplexValue2DPart(point, ix + 1, iy + 1);
+		if (sx - ix >= sy - iy) {
+			sample += SimplexValue2DPart(point, ix + 1, iy);
+		}
+		else {
+			sample += SimplexValue2DPart(point, ix, iy + 1);
+		}
+		sample.derivative *= frequency;
+		return sample * (8f * 2f / hashMask) - 1f;
+	}
+
+	private static NoiseSample SimplexValue3DPart (Vector3 point, int ix, int iy, int iz) {
+		float unskew = (ix + iy + iz) * (1f / 6f);
+		float x = point.x - ix + unskew;
+		float y = point.y - iy + unskew;
+		float z = point.z - iz + unskew;
+		float f = 0.5f - x * x - y * y - z * z;
+		NoiseSample sample = new NoiseSample();
+		if (f > 0f) {
+			float f2 = f * f;
+			float f3 = f * f2;
+			float h = hash[hash[hash[ix & hashMask] + iy & hashMask] + iz & hashMask];
+			float h6f2 = -6f * h * f2;
+			sample.value = h * f3;
+			sample.derivative.x = h6f2 * x;
+			sample.derivative.y = h6f2 * y;
+			sample.derivative.z = h6f2 * z;
+		}
+		return sample;
+	}
+
+	public static NoiseSample SimplexValue3D (Vector3 point, float frequency) {
+		point *= frequency;
+		float skew = (point.x + point.y + point.z) * (1f / 3f);
+		float sx = point.x + skew;
+		float sy = point.y + skew;
+		float sz = point.z + skew;
+		int ix = Mathf.FloorToInt(sx);
+		int iy = Mathf.FloorToInt(sy);
+		int iz = Mathf.FloorToInt(sz);
+		NoiseSample sample = SimplexValue3DPart(point, ix, iy, iz);
+		sample += SimplexValue3DPart(point, ix + 1, iy + 1, iz + 1);
+		float x = sx - ix;
+		float y = sy - iy;
+		float z = sz - iz;
+		if (x >= y) {
+			if (x >= z) {
+				sample += SimplexValue3DPart(point, ix + 1, iy, iz);
+				if (y >= z) {
+					sample += SimplexValue3DPart(point, ix + 1, iy + 1, iz);
+				}
+				else {
+					sample += SimplexValue3DPart(point, ix + 1, iy, iz + 1);
+				}
+			}
+			else {
+				sample += SimplexValue3DPart(point, ix, iy, iz + 1);
+				sample += SimplexValue3DPart(point, ix + 1, iy, iz + 1);
+			}
+		}
+		else {
+			if (y >= z) {
+				sample += SimplexValue3DPart(point, ix, iy + 1, iz);
+				if (x >= z) {
+					sample += SimplexValue3DPart(point, ix + 1, iy + 1, iz);
+				}
+				else {
+					sample += SimplexValue3DPart(point, ix, iy + 1, iz + 1);
+				}
+			}
+			else {
+				sample += SimplexValue3DPart(point, ix, iy, iz + 1);
+				sample += SimplexValue3DPart(point, ix, iy + 1, iz + 1);
+			}
+		}
+		sample.derivative *= frequency;
+		return sample * (8f * 2f / hashMask) - 1f;
+	}
+
+	private static NoiseSample Simplex1DPart (Vector3 point, int ix) {
+		float x = point.x - ix;
+		float f = 1f - x * x;
+		float f2 = f * f;
+		float f3 = f * f2;
+		float g = gradients1D[hash[ix & hashMask] & gradientsMask1D];
+		float v = g * x;
+		NoiseSample sample = new NoiseSample();
+		sample.value = v * f3;
+		sample.derivative.x = g * f3 - 6f * v * x * f2;
+		return sample;
+	}
+	
+	public static NoiseSample Simplex1D (Vector3 point, float frequency) {
+		point *= frequency;
+		int ix = Mathf.FloorToInt(point.x);
+		NoiseSample sample = Simplex1DPart(point, ix);
+		sample += Simplex1DPart(point, ix + 1);
+		sample.derivative *= frequency;
+		return sample * (64f / 27f);
+	}
+	
+	private static NoiseSample Simplex2DPart (Vector3 point, int ix, int iy) {
+		float unskew = (ix + iy) * squaresToTriangles;
+		float x = point.x - ix + unskew;
+		float y = point.y - iy + unskew;
+		float f = 0.5f - x * x - y * y;
+		NoiseSample sample = new NoiseSample();
+		if (f > 0f) {
+			float f2 = f * f;
+			float f3 = f * f2;
+			Vector2 g = gradients2D[hash[hash[ix & hashMask] + iy & hashMask] & gradientsMask2D];
+			float v = Dot(g, x, y);
+			float v6f2 = -6f * v * f2;
+			sample.value = v * f3;
+			sample.derivative.x = g.x * f3 + v6f2 * x;
+			sample.derivative.y = g.y * f3 + v6f2 * y;
+		}
+		return sample;
+	}
+	
+	public static NoiseSample Simplex2D (Vector3 point, float frequency) {
+		point *= frequency;
+		float skew = (point.x + point.y) * trianglesToSquares;
+		float sx = point.x + skew;
+		float sy = point.y + skew;
+		int ix = Mathf.FloorToInt(sx);
+		int iy = Mathf.FloorToInt(sy);
+		NoiseSample sample = Simplex2DPart(point, ix, iy);
+		sample += Simplex2DPart(point, ix + 1, iy + 1);
+		if (sx - ix >= sy - iy) {
+			sample += Simplex2DPart(point, ix + 1, iy);
+		}
+		else {
+			sample += Simplex2DPart(point, ix, iy + 1);
+		}
+		sample.derivative *= frequency;
+		return sample * simplexScale2D;
+	}
+	
+	private static NoiseSample Simplex3DPart (Vector3 point, int ix, int iy, int iz) {
+		float unskew = (ix + iy + iz) * (1f / 6f);
+		float x = point.x - ix + unskew;
+		float y = point.y - iy + unskew;
+		float z = point.z - iz + unskew;
+		float f = 0.5f - x * x - y * y - z * z;
+		NoiseSample sample = new NoiseSample();
+		if (f > 0f) {
+			float f2 = f * f;
+			float f3 = f * f2;
+			Vector3 g = simplexGradients3D[hash[hash[hash[ix & hashMask] + iy & hashMask] + iz & hashMask] & simplexGradientsMask3D];
+			float v = Dot(g, x, y, z);
+			float v6f2 = -6f * v * f2;
+			sample.value = v * f3;
+			sample.derivative.x = g.x * f3 + v6f2 * x;
+			sample.derivative.y = g.y * f3 + v6f2 * y;
+			sample.derivative.z = g.z * f3 + v6f2 * z;
+		}
+		return sample;
+	}
+	
+	public static NoiseSample Simplex3D (Vector3 point, float frequency) {
+		point *= frequency;
+		float skew = (point.x + point.y + point.z) * (1f / 3f);
+		float sx = point.x + skew;
+		float sy = point.y + skew;
+		float sz = point.z + skew;
+		int ix = Mathf.FloorToInt(sx);
+		int iy = Mathf.FloorToInt(sy);
+		int iz = Mathf.FloorToInt(sz);
+		NoiseSample sample = Simplex3DPart(point, ix, iy, iz);
+		sample += Simplex3DPart(point, ix + 1, iy + 1, iz + 1);
+		float x = sx - ix;
+		float y = sy - iy;
+		float z = sz - iz;
+		if (x >= y) {
+			if (x >= z) {
+				sample += Simplex3DPart(point, ix + 1, iy, iz);
+				if (y >= z) {
+					sample += Simplex3DPart(point, ix + 1, iy + 1, iz);
+				}
+				else {
+					sample += Simplex3DPart(point, ix + 1, iy, iz + 1);
+				}
+			}
+			else {
+				sample += Simplex3DPart(point, ix, iy, iz + 1);
+				sample += Simplex3DPart(point, ix + 1, iy, iz + 1);
+			}
+		}
+		else {
+			if (y >= z) {
+				sample += Simplex3DPart(point, ix, iy + 1, iz);
+				if (x >= z) {
+					sample += Simplex3DPart(point, ix + 1, iy + 1, iz);
+				}
+				else {
+					sample += Simplex3DPart(point, ix, iy + 1, iz + 1);
+				}
+			}
+			else {
+				sample += Simplex3DPart(point, ix, iy, iz + 1);
+				sample += Simplex3DPart(point, ix, iy + 1, iz + 1);
+			}
+		}
+		sample.derivative *= frequency;
+		return sample * simplexScale3D;
 	}
 
 	public static NoiseSample Sum (NoiseMethod method, Vector3 point, float frequency, int octaves, float lacunarity, float persistence) {
